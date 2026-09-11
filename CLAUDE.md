@@ -271,6 +271,36 @@ analysis, then ranking -- never from fixtures. The pair that matters is
 `LEAN_MIXTURE` vs `FUEL_PRESSURE_PROBLEM`: identical in the fuel trims,
 separated only by rail pressure, and correctly reported as unseparated when
 that reading is withheld.
+## Confirmation tests
+
+`src/domain/confirmation/` turns the Stage 10 next steps into performable
+tests, records the outcome, and folds it back into the ranking.
+
+- **A test result is evidence, scored like any other.** It is added to the
+  same earned/available sum the differential keeps, so there is one notion of
+  how well a cause fits rather than a scan score and a test score that could
+  disagree.
+- **`UNABLE_TO_PERFORM` and `SKIP` never change the assessment.** A test that
+  produced no observation produced no evidence; letting it nudge a ranking
+  would fabricate a result from the absence of one (Rule 1). Both are recorded
+  as limitations so the user sees what was left unsettled.
+- **A result may move a cause, never invent one.** A mechanism the readings
+  never raised does not become a candidate because a test was run.
+- **Every test is an observation.** None fits a component to see whether the
+  symptom goes away -- that is parts-swapping and a parts recommendation by
+  another name (Rule 9). A test asserts this over the whole catalogue.
+- **An unknown test id throws.** Silently dropping it would hide a broken
+  caller (Rule 3).
+- `PASS`/`FAIL` are for a test with a stated criterion; `NORMAL`/`ABNORMAL`
+  for one that reads a value against a specification. The distinction is
+  between "the predicted behaviour happened" and "the number was in range".
+
+The decision tree is **produced, not stored**. After each result the engine
+asks which remaining test bears on the most causes still in contention and
+offers that one. A stored tree would enumerate every path in advance and go
+stale the moment a cause is added (Rule 13). The spec's example path -- trim
+high at idle, raise the engine speed, see whether it falls -- is what that
+rule produces from `trim-response-to-airflow`.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

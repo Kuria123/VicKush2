@@ -62,6 +62,12 @@ export interface RankedCause {
    * not a probability, and deliberately not presented as one.
    */
   confidence: number;
+  /**
+   * The raw sum behind `confidence`, kept so a later stage can fold a
+   * confirmation test result into the same score rather than inventing a
+   * second, parallel notion of how sure the engine is.
+   */
+  points: { earned: number; available: number };
   contributions: readonly Contribution[];
   /** Observations incompatible with the cause, with the reason each excludes it. */
   exclusions: readonly Contribution[];
@@ -108,10 +114,10 @@ export interface Differential {
  * up within a few points of each other. Anything under this margin is not a
  * distinction the measurements support.
  */
-const AMBIGUITY_MARGIN = 15;
+export const AMBIGUITY_MARGIN = 15;
 
 /** Below this a cause has nothing meaningful arguing for it. */
-const SUPPORTED_THRESHOLD = 30;
+export const SUPPORTED_THRESHOLD = 30;
 
 export function differentiate(analysis: DiagnosticAnalysis): Differential {
   const byId = new Map(analysis.evidence.map((e) => [e.id, e]));
@@ -231,6 +237,7 @@ function evaluate(
           ? 'SUPPORTED'
           : 'POSSIBLE',
     confidence,
+    points: { earned, available },
     contributions,
     exclusions,
     unmet,
@@ -262,7 +269,7 @@ function mixtureMatches(
  * Verdict
  * ---------------------------------------------------------------------- */
 
-function decide(causes: readonly RankedCause[]): DifferentialVerdict {
+export function decide(causes: readonly RankedCause[]): DifferentialVerdict {
   const supported = causes.filter((c) => c.status === 'SUPPORTED');
   if (supported.length === 0) return 'INSUFFICIENT';
   if (supported.length === 1) return 'SINGLE_LEADING';
@@ -287,7 +294,7 @@ function decide(causes: readonly RankedCause[]): DifferentialVerdict {
  * verdict there is nothing to separate, but a cause still sitting close
  * behind the leader is worth a confirming measurement.
  */
-function contenders(
+export function contenders(
   causes: readonly RankedCause[],
   verdict: DifferentialVerdict,
 ): RankedCause[] {
