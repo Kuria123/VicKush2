@@ -242,6 +242,35 @@ evidence it reasons over is produced by coupled physics, as it will be from a
 real vehicle. Two simulator gaps were found this way and fixed in the *model*,
 not the test -- a missing cooling fan (a healthy engine revved at a standstill
 overheated) and a misfire roughness term too small to disturb idle observably.
+## Differential diagnosis
+
+`src/domain/differential/` ranks candidate causes over the Stage 9 evidence.
+Deterministic, no language model; the score is a transparent sum of weighted
+observations, each carrying the reason it was awarded.
+
+- **A cause is a mechanism, never a part.** "Air entering downstream of the
+  airflow sensor" is a cause; naming the component that lets it in needs
+  physical inspection a scan cannot do (Rule 9). A test asserts no output ever
+  says replace/install/fit/buy.
+- **Causes match on measurements, never on code meaning.** This build parses
+  DTC structure but has no authoritative meaning table, so inferring a
+  mechanism from a code would fabricate that meaning (Rule 1). Codes are
+  reported as corroboration; they award no points.
+- **The engine refuses to choose when the evidence does not separate.** If the
+  leaders are within `AMBIGUITY_MARGIN`, or if the leader's *defining*
+  observation was never made, the verdict is `AMBIGUOUS` and the output is the
+  measurement that would settle it. A cause must not lead on corroboration
+  alone -- "nothing else is wrong" is not evidence for it.
+- **A ruled-out cause stays in the result**, with the observation that excluded
+  it. Exclusion is a finding, not a deletion.
+- **An unobtainable observation is asked for, not assumed.** A cause resting on
+  a reading the scan never captured produces a step naming that reading.
+
+Tested end to end through the simulator -- scenario, physics, session, Stage 9
+analysis, then ranking -- never from fixtures. The pair that matters is
+`LEAN_MIXTURE` vs `FUEL_PRESSURE_PROBLEM`: identical in the fuel trims,
+separated only by rail pressure, and correctly reported as unseparated when
+that reading is withheld.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
