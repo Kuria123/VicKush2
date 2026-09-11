@@ -101,6 +101,20 @@ export interface AIExplanation {
   model: string;
 }
 
+/** One reply from the mechanic, with the provenance to present it honestly. */
+export interface AIReply {
+  /** What to say back to the owner. */
+  content: string;
+  model: string;
+}
+
+export interface ConverseRequest {
+  /** The closed vehicle + diagnosis context. */
+  context: string;
+  /** The exchange so far, oldest first, ending with the owner's message. */
+  messages: readonly { role: 'user' | 'assistant'; content: string }[];
+}
+
 export interface AIProvider {
   describe(): AIProviderDescriptor;
 
@@ -112,6 +126,24 @@ export interface AIProvider {
    * question "what was this model actually told?" has to be answerable.
    */
   explainDiagnosis(context: string): Promise<AIResult<AIExplanation>>;
+
+  /**
+   * Continues a vehicle-specific conversation.
+   *
+   * Optional, and gated behind the `CONVERSATION` capability: a provider that
+   * cannot converse must not be asked to, and the UI reads the descriptor
+   * rather than probing for the method.
+   */
+  converse?(request: ConverseRequest): Promise<AIResult<AIReply>>;
+}
+
+export function supportsConversation(
+  provider: AIProvider,
+): provider is AIProvider & Required<Pick<AIProvider, 'converse'>> {
+  return (
+    hasAICapability(provider.describe(), 'CONVERSATION') &&
+    typeof provider.converse === 'function'
+  );
 }
 
 export function hasAICapability(

@@ -363,6 +363,34 @@ nothing itself (Rule 8).
 Set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in `.env.local` to
 enable it. The structured diagnosis is complete without it, and the panel sits
 last on the page for that reason.
+## AI mechanic
+
+`src/domain/ai/conversation.ts` plus `converse()` on the provider. The spec
+asks it to ask diagnostic questions rather than name a failed component, and
+that behaviour is enforced twice, because instructions alone do not hold:
+
+- **The prompt requires it.** A symptom is the start of a diagnosis, never the
+  end of one. Ask two or three narrowing questions, explain what each answer
+  would tell you, and name the measurement that would settle it.
+- **The grounding check rejects the reply if it does not.** The same check the
+  explanation layer uses runs on every conversational turn, so naming a part
+  to fit, inventing a specification, stating a code meaning or claiming the
+  vehicle is safe to drive all result in a withheld reply.
+
+- **What is NOT known is stated, not omitted.** Service history, previous
+  repairs, maintenance records and mileage do not exist until Stage 15, so the
+  context says so explicitly. Silence would let the model assume a clean
+  history and reason from it.
+- **The owner's own words join the grounding corpus; the model's do not.** A
+  figure the owner supplied may be repeated back -- that is not a fabrication.
+  Its own earlier replies are excluded deliberately, or it could invent a
+  number once and cite itself from then on.
+- **The transcript is client-side and sent whole each turn.** A server-side
+  conversation store would outlive the in-memory session and end up
+  referencing readings that no longer exist.
+- `/api/ai/mechanic` requires sign-in and bounds the context, each message and
+  the transcript length. An unbounded transcript is both a cost problem and a
+  way to push the original instructions out of the model's attention.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

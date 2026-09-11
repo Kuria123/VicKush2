@@ -206,7 +206,9 @@ describe('ambiguity', () => {
  * ------------------------------------------------------------------------ */
 
 describe('other systems', () => {
-  it('ranks heat rejection loss when the engine runs hot', () => {
+  // See VehicleSimulator.test.ts: 1500 simulated seconds is heavy enough to
+  // exceed the 5 s default under a full parallel run.
+  it('ranks heat rejection loss when the engine runs hot', { timeout: 30_000 }, () => {
     const result = differential('OVERHEATING', [{ throttle: 0, seconds: 1500 }]);
 
     expect(leader(result)?.id).toBe('heat-rejection-loss');

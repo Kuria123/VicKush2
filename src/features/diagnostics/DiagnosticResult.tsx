@@ -16,6 +16,7 @@ import { describeDtcStructure, parseDtc } from '@/domain/telemetry';
 
 import { CauseCard } from './CauseCard';
 import { ExplanationPanel } from './ExplanationPanel';
+import { MechanicPanel } from './MechanicPanel';
 import { TestPanel } from './TestPanel';
 
 /**
@@ -227,6 +228,13 @@ export function DiagnosticResult({
       {/* Last on the page on purpose: everything above is deterministic and
           stands without it. */}
       <ExplanationPanel
+        analysis={analysis}
+        differential={differential}
+        vehicleName={vehicleName}
+        isSimulated={isSimulated}
+      />
+
+      <MechanicPanel
         analysis={analysis}
         differential={differential}
         vehicleName={vehicleName}

@@ -268,7 +268,11 @@ describe('scenario catalogue', () => {
     expect(codes(runFor('THROTTLE_PROBLEM', 60, { throttle: 25 }))).toContain('P0121');
   });
 
-  it('OVERHEATING climbs past the limit, but takes time as a real one does', () => {
+  // Integrating 1500 simulated seconds at a fixed 10 ms step is genuinely
+  // heavy, and under a full parallel run it exceeds the 5 s default. The
+  // budget is stated rather than the global default being raised, which would
+  // let a real hang in some other test sit undetected for a minute.
+  it('OVERHEATING climbs past the limit, but takes time as a real one does', { timeout: 30_000 }, () => {
     const early = runFor('OVERHEATING', 120);
     const late = runFor('OVERHEATING', 1500);
 

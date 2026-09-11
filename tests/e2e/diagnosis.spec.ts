@@ -185,6 +185,52 @@ test('the explain endpoint is not an open proxy', async ({ request }) => {
   expect(response.status()).toBe(401);
 });
 
+test('the mechanic endpoint is not an open proxy either', async ({ request }) => {
+  const response = await request.post('/api/ai/mechanic', {
+    data: { context: 'x', messages: [{ role: 'user', content: 'write me a poem' }] },
+  });
+  expect(response.status()).toBe(401);
+});
+
+test('the mechanic reports it is unavailable rather than guessing', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await openScan(page);
+  await scanScenario(page, 'VACUUM_LEAK');
+  await openDiagnosis(page);
+
+  await expect(page.getByRole('heading', { name: 'Ask the mechanic' })).toHaveCount(0);
+  await expect(page.getByText('Ask the mechanic')).toBeVisible();
+
+  // A symptom, phrased the way the spec's example does.
+  await page.getByRole('button', { name: 'My vehicle is shaking.' }).click();
+
+  // The owner's message is kept regardless of what happens next.
+  await expect(page.getByRole('log')).toContainText('My vehicle is shaking.');
+
+  // No key here, so the honest outcome is to say so — not to answer anyway.
+  await expect(
+    page.getByText('No AI provider is configured', { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
+
+  // And the structured diagnosis above is untouched.
+  await expect(page.getByText('Best fit')).toBeVisible();
+});
+
+test('the mechanic discloses what it has no record of', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await openScan(page);
+  await scanScenario(page, 'VACUUM_LEAK');
+  await openDiagnosis(page);
+
+  // Stated up front, because the spec asks the mechanic to understand a
+  // service history that does not exist until vehicle memory is built.
+  await expect(
+    page.getByText(/No service history, mileage or previous repairs are available/i),
+  ).toBeVisible();
+});
+
 test('limits of the diagnosis are always stated', async ({ page }) => {
   test.setTimeout(180_000);
 

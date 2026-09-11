@@ -2,12 +2,16 @@ import {
   aiFail,
   aiOk,
   checkGrounding,
+  groundingCorpus,
   parseExplanationJson,
   EXPLANATION_SYSTEM_PROMPT,
+  MECHANIC_SYSTEM_PROMPT,
   type AIExplanation,
   type AIProvider,
   type AIProviderDescriptor,
+  type AIReply,
   type AIResult,
+  type ConverseRequest,
 } from '@/domain/ai';
 
 /**
@@ -64,12 +68,92 @@ export class AnthropicAIProvider implements AIProvider {
       model: this.model,
       // CONVERSATION is Stage 14 and is not implemented, so it is not
       // claimed. A declared capability is a promise the UI will act on.
-      capabilities: ['EXPLAIN_DIAGNOSIS'],
+      capabilities: ['EXPLAIN_DIAGNOSIS', 'CONVERSATION'],
       configured: this.apiKey.length > 0,
     };
   }
 
   async explainDiagnosis(context: string): Promise<AIResult<AIExplanation>> {
+    const reply = await this.send(EXPLANATION_SYSTEM_PROMPT, [
+      { role: 'user', content: context },
+    ]);
+    if (!reply.ok) return aiFail(reply.error.code, reply.error.message, {
+      retryable: reply.error.retryable,
+    });
+
+    const parsed = parseExplanationJson(reply.value);
+    if (!parsed) {
+      return aiFail(
+        'UPSTREAM_ERROR',
+        'The AI provider did not return the requested JSON structure.',
+      );
+    }
+
+    /*
+     * The check that matters. The model is asked to follow the rules; this is
+     * what happens when it does not. Every field is checked, because an
+     * invented figure buried in a caveat is no better than one in the summary.
+     */
+    const report = checkGrounding(
+      [parsed.summary, parsed.reasoning, ...parsed.caveats].join('\n'),
+      context,
+    );
+
+    if (!report.grounded) {
+      return aiFail(
+        'UNGROUNDED_RESPONSE',
+        'The explanation was withheld because it was not supported by the diagnostic data.',
+        { violations: report.violations.map((v) => v.detail), retryable: true },
+      );
+    }
+
+    return aiOk({
+      summary: parsed.summary,
+      reasoning: parsed.reasoning,
+      caveats: parsed.caveats,
+      model: this.model,
+    });
+  }
+
+  /**
+   * The mechanic turn.
+   *
+   * The reply is checked against the context *and the owner's own messages*:
+   * repeating back a figure the owner supplied is not a fabrication, but
+   * inventing a reading still is. A reply that fails is withheld rather than
+   * shown with a warning — the owner is being advised, and advice built on a
+   * made-up number is worse than a request to try again.
+   */
+  async converse({ context, messages }: ConverseRequest): Promise<AIResult<AIReply>> {
+    if (messages.length === 0) {
+      return aiFail('NOT_SUPPORTED', 'A conversation needs at least one message.');
+    }
+
+    const reply = await this.send(
+      `${MECHANIC_SYSTEM_PROMPT}\n\n${context}`,
+      messages.map((message) => ({ role: message.role, content: message.content })),
+    );
+    if (!reply.ok) return aiFail(reply.error.code, reply.error.message, {
+      retryable: reply.error.retryable,
+    });
+
+    const report = checkGrounding(reply.value, groundingCorpus(context, messages));
+    if (!report.grounded) {
+      return aiFail(
+        'UNGROUNDED_RESPONSE',
+        'That reply was withheld because it went beyond what is known about this vehicle.',
+        { violations: report.violations.map((v) => v.detail), retryable: true },
+      );
+    }
+
+    return aiOk({ content: reply.value.trim(), model: this.model });
+  }
+
+  /** One request to the Messages API, returning the text it produced. */
+  private async send(
+    system: string,
+    messages: readonly { role: 'user' | 'assistant'; content: string }[],
+  ): Promise<AIResult<string>> {
     if (this.apiKey.length === 0) {
       return aiFail('NOT_CONFIGURED', 'No API key is set for the Anthropic provider.');
     }
@@ -89,8 +173,8 @@ export class AnthropicAIProvider implements AIProvider {
         body: JSON.stringify({
           model: this.model,
           max_tokens: this.maxTokens,
-          system: EXPLANATION_SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: context }],
+          system,
+          messages,
         }),
         signal: controller.signal,
       });
@@ -128,38 +212,7 @@ export class AnthropicAIProvider implements AIProvider {
       return aiFail('UPSTREAM_ERROR', 'The AI provider returned no text content.');
     }
 
-    const parsed = parseExplanationJson(text);
-    if (!parsed) {
-      return aiFail(
-        'UPSTREAM_ERROR',
-        'The AI provider did not return the requested JSON structure.',
-      );
-    }
-
-    /*
-     * The check that matters. The model is asked to follow the rules; this is
-     * what happens when it does not. Every field is checked, because an
-     * invented figure buried in a caveat is no better than one in the summary.
-     */
-    const report = checkGrounding(
-      [parsed.summary, parsed.reasoning, ...parsed.caveats].join('\n'),
-      context,
-    );
-
-    if (!report.grounded) {
-      return aiFail(
-        'UNGROUNDED_RESPONSE',
-        'The explanation was withheld because it was not supported by the diagnostic data.',
-        { violations: report.violations.map((v) => v.detail), retryable: true },
-      );
-    }
-
-    return aiOk({
-      summary: parsed.summary,
-      reasoning: parsed.reasoning,
-      caveats: parsed.caveats,
-      model: this.model,
-    });
+    return aiOk(text);
   }
 
   private async extractText(response: Response): Promise<string | null> {

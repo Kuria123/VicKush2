@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { supportsConversation, type ConversationMessage } from '@/domain/ai';
+
 import { AnthropicAIProvider } from './AnthropicAIProvider';
 import { UnconfiguredAIProvider } from './UnconfiguredAIProvider';
 import { resolveAIProvider } from './registry';
@@ -45,9 +47,10 @@ const GOOD_REPLY = JSON.stringify({
 describe('AnthropicAIProvider', () => {
   it('declares only what it implements', () => {
     const descriptor = provider(replyWith(GOOD_REPLY)).describe();
+    // Both are implemented as of Stage 14, and a capability is only declared
+    // once it is — a listed one is a promise the UI will act on.
     expect(descriptor.capabilities).toContain('EXPLAIN_DIAGNOSIS');
-    // Stage 14; claiming it would make the UI offer an action that cannot work.
-    expect(descriptor.capabilities).not.toContain('CONVERSATION');
+    expect(descriptor.capabilities).toContain('CONVERSATION');
     expect(descriptor.configured).toBe(true);
   });
 
@@ -152,12 +155,102 @@ describe('AnthropicAIProvider', () => {
   });
 });
 
+describe('the AI mechanic', () => {
+  const VEHICLE_CONTEXT = [
+    '# VEHICLE CONTEXT',
+    'Vehicle: Toyota Harrier',
+    '## WHAT IS NOT AVAILABLE',
+    '- Service history or previous repairs for this vehicle.',
+    '## DIAGNOSTIC DATA',
+    'No scan has been recorded in this session.',
+  ].join('\n');
+
+  const asked: ConversationMessage[] = [{ role: 'user', content: 'My vehicle is shaking.' }];
+
+  it('declares the capability once it implements it', () => {
+    expect(provider(replyWith('x')).describe().capabilities).toContain('CONVERSATION');
+  });
+
+  it('passes a question back, with the rules as the system prompt', async () => {
+    let body: Record<string, unknown> = {};
+    const capture = (async (_url: string, init: RequestInit) => {
+      body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      return new Response(
+        JSON.stringify({
+          content: [
+            {
+              type: 'text',
+              text: 'When does it shake — idling, or moving? Does it change with engine speed?',
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof fetch;
+
+    const result = await provider(capture).converse({
+      context: VEHICLE_CONTEXT,
+      messages: asked,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.content).toContain('When does it shake');
+
+    expect(String(body.system)).toContain('never the end');
+    expect(String(body.system)).toContain('Toyota Harrier');
+    expect(JSON.stringify(body.messages)).toContain('My vehicle is shaking');
+  });
+
+  it('withholds a reply that names a part to fit', async () => {
+    const result = await provider(
+      replyWith('That will be the engine mounts. You should replace the mounts.'),
+    ).converse({ context: VEHICLE_CONTEXT, messages: asked });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('UNGROUNDED_RESPONSE');
+      expect(result.error.violations?.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('withholds a reply that invents a specification', async () => {
+    const result = await provider(
+      replyWith('A healthy engine idles at 750 rpm, so yours is low.'),
+    ).converse({ context: VEHICLE_CONTEXT, messages: asked });
+
+    expect(result.ok).toBe(false);
+  });
+
+  it('allows a reply that repeats what the owner said', async () => {
+    const result = await provider(
+      replyWith('You said it is worse around 700 rpm. Does it ease when you rev it?'),
+    ).converse({
+      context: VEHICLE_CONTEXT,
+      messages: [{ role: 'user', content: 'It shakes at 700 rpm when stopped.' }],
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('refuses an empty conversation rather than inventing an opening', async () => {
+    const result = await provider(replyWith('Hello!')).converse({
+      context: VEHICLE_CONTEXT,
+      messages: [],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('NOT_SUPPORTED');
+  });
+});
+
 describe('when nothing is configured', () => {
   it('says so rather than producing filler', async () => {
     const unconfigured = new UnconfiguredAIProvider();
 
     expect(unconfigured.describe().configured).toBe(false);
     expect(unconfigured.describe().capabilities).toHaveLength(0);
+    // The UI reads the descriptor rather than probing for the method.
+    expect(supportsConversation(unconfigured)).toBe(false);
 
     const result = await unconfigured.explainDiagnosis();
     expect(result.ok).toBe(false);
