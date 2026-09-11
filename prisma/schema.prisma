@@ -1,0 +1,108 @@
+// AutoMind — Prisma schema
+//
+// Phase 1 scope ONLY: authentication tables plus a minimal Vehicle record used
+// to prove that a real domain table round-trips against MySQL.
+//
+// The full vehicle domain (VehicleIdentification, VehicleConfiguration,
+// VehicleModule) is Stage 3 and is deliberately NOT modelled here yet.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7: the connection URL lives in prisma.config.ts (for the CLI) and is
+// supplied to PrismaClient through a driver adapter (for the runtime).
+datasource db {
+  provider = "mysql"
+}
+
+// ---------------------------------------------------------------------------
+// Authentication (Auth.js v5 + @auth/prisma-adapter)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // Null for OAuth-only accounts. Never stores a plaintext password.
+  passwordHash  String?   @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  vehicles Vehicle[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle — MINIMAL Phase 1 placeholder
+// ---------------------------------------------------------------------------
+
+model Vehicle {
+  id      String @id @default(cuid())
+  ownerId String
+
+  make  String @db.VarChar(64)
+  model String @db.VarChar(64)
+  year  Int    @db.SmallInt
+
+  isPrimary Boolean   @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([ownerId, deletedAt])
+  @@map("vehicles")
+}

@@ -1,0 +1,116 @@
+@import 'tailwindcss';
+
+/*
+ * AutoMind design tokens — Phase 1 scaffold only.
+ *
+ * This is the minimum palette and scale needed for a coherent base layout.
+ * The full design system (components, states, charts, motion) is Stage 2.
+ *
+ * Visual language: graphite instrument surfaces, electric blue as the primary
+ * action colour, cyan reserved for live telemetry. Restrained, not neon.
+ */
+
+@theme {
+  /* Graphite surface ramp */
+  --color-graphite-50: #f5f7fa;
+  --color-graphite-100: #e9edf3;
+  --color-graphite-200: #cfd6e0;
+  --color-graphite-300: #a7b2c2;
+  --color-graphite-400: #737f92;
+  --color-graphite-500: #4d5768;
+  --color-graphite-600: #363e4d;
+  --color-graphite-700: #262d39;
+  --color-graphite-800: #1a1f28;
+  --color-graphite-900: #12161d;
+  --color-graphite-950: #0b0e13;
+
+  /* Electric blue — primary action */
+  --color-electric-400: #4d9bff;
+  --color-electric-500: #1a7fff;
+  --color-electric-600: #0062e0;
+
+  /* Cyan — reserved for live telemetry signal */
+  --color-signal-400: #3ddbd9;
+  --color-signal-500: #12b8b6;
+
+  /* Diagnostic status */
+  --color-status-ok: #2ec27e;
+  --color-status-warn: #e5a50a;
+  --color-status-fault: #e0464b;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, 'Cascadia Code', 'Segoe UI Mono', 'Roboto Mono', monospace;
+}
+
+/*
+ * Semantic surface variables. Components reference these rather than raw ramp
+ * values, so the light/dark mapping lives in exactly one place.
+ */
+:root {
+  --surface-base: var(--color-graphite-50);
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--color-graphite-100);
+  --surface-border: var(--color-graphite-200);
+  --text-primary: var(--color-graphite-900);
+  --text-secondary: var(--color-graphite-500);
+  --text-muted: var(--color-graphite-400);
+  --accent: var(--color-electric-600);
+  --accent-contrast: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-base: var(--color-graphite-950);
+    --surface-raised: var(--color-graphite-900);
+    --surface-sunken: var(--color-graphite-800);
+    --surface-border: var(--color-graphite-700);
+    --text-primary: var(--color-graphite-50);
+    --text-secondary: var(--color-graphite-300);
+    --text-muted: var(--color-graphite-400);
+    --accent: var(--color-electric-500);
+    --accent-contrast: #ffffff;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--surface-border);
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--surface-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Technical grid, used sparingly as a backdrop texture. */
+  .automind-grid {
+    background-image:
+      linear-gradient(to right, var(--surface-border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--surface-border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.4;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
