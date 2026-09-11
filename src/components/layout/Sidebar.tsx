@@ -43,7 +43,7 @@ export function Sidebar() {
         })}
       </ul>
 
-      <p className="label-technical px-5 pb-4">Phase 2 — design system</p>
+      <p className="label-technical px-5 pb-4">Early development</p>
     </nav>
   );
 }

@@ -121,6 +121,61 @@ export const updateVehicleSchema = vehicleIdentitySchema.extend({
   isPrimary: z.boolean().optional(),
 });
 
+/* -------------------------------------------------------------------------
+ * Form variants
+ *
+ * FormData yields strings, and an untouched field yields "". These schemas
+ * coerce before validating so "not provided" becomes null rather than 0 or
+ * an empty string.
+ * ---------------------------------------------------------------------- */
+
+/** "" → null; a numeric string → number; anything else passes through to fail. */
+function coerceOptionalNumber(value: unknown): unknown {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : value;
+  }
+  return value;
+}
+
+/** "" → null, so an unselected <select> is "not known" rather than invalid. */
+function coerceOptionalEnum(value: unknown): unknown {
+  return value === '' || value === undefined ? null : value;
+}
+
+const formYear = z.preprocess(coerceOptionalNumber, yearSchema);
+
+export const vehicleFormSchema = z
+  .object({
+    displayName: optionalText(80),
+    make: optionalText(64),
+    model: optionalText(64),
+    year: formYear,
+    vin: vinSchema,
+    engineDisplacementCc: z.preprocess(
+      coerceOptionalNumber,
+      z
+        .number()
+        .int()
+        .min(50, 'Displacement must be at least 50 cc.')
+        .max(32000, 'Displacement must be at most 32000 cc.')
+        .nullable()
+        .optional(),
+    ),
+    fuelType: z.preprocess(coerceOptionalEnum, z.enum(FUEL_TYPES).nullable().optional()),
+    transmissionType: z.preprocess(
+      coerceOptionalEnum,
+      z.enum(TRANSMISSION_TYPES).nullable().optional(),
+    ),
+  })
+  .refine((value) => Boolean(value.make || value.model || value.vin || value.displayName), {
+    message: 'Provide at least a make, model, VIN or name.',
+    path: ['make'],
+  });
+
+export type VehicleFormInput = z.infer<typeof vehicleFormSchema>;
+
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
 export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
 export type VehicleConfigurationInput = z.infer<typeof vehicleConfigurationSchema>;

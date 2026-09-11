@@ -10,7 +10,7 @@
  */
 export const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', status: 'available' },
-  { href: '/vehicles', label: 'My Vehicles', status: 'planned' },
+  { href: '/vehicles', label: 'My Vehicles', status: 'available' },
   { href: '/diagnostics', label: 'Diagnostics', status: 'planned' },
   { href: '/live-scan', label: 'Live Scan', status: 'planned' },
   { href: '/health', label: 'Vehicle Health', status: 'planned' },

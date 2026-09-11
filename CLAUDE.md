@@ -94,7 +94,7 @@ mirrors its enums exactly and the service layer maps them 1:1.
 - **NULL means "not known", always.** No descriptive field is ever backfilled
   with a plausible default.
 - **VIN: structure is a hard rule, the check digit is only a signal.** The
-  check digit is mandatory under FMVSS 565 but is *not* part of ISO 3779
+  check digit is mandatory under FMVSS 565 but is _not_ part of ISO 3779
   worldwide, and Japanese-market vehicles — most of the imported fleet this
   product targets — routinely fail it. A failed check digit lowers confidence
   and is shown to the user; it never rejects the VIN.
@@ -105,7 +105,7 @@ mirrors its enums exactly and the service layer maps them 1:1.
   so a score can always be explained back to the user.
 - **The stored identification is a derived snapshot**, recomputed inside the
   same transaction as any fact that feeds it, so it cannot drift. The
-  contributions and gaps are deliberately *not* stored — they are recomputed,
+  contributions and gaps are deliberately _not_ stored — they are recomputed,
   so they can never go stale.
 - **Ownership is enforced in the query**, not checked afterwards, so a caller
   cannot forget it.
