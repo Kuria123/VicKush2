@@ -586,8 +586,15 @@ export class EngineModel {
     let rpm = ((omega + domega) * 60) / (2 * Math.PI);
 
     // Combustion is not perfectly even; a misfiring cylinder makes it much
-    // less so, which is what an unstable idle actually is.
-    const roughness = 1.4 + this.faults.misfireRate * 90;
+    // less so, which is what an unstable idle actually is. A misfire removes a
+    // whole power stroke, so the disturbance is far larger than ordinary
+    // cycle-to-cycle variation — at the earlier coefficient the shake was too
+    // small to be observable, which is not how a misfiring engine behaves.
+    // Calibrated against the idle it produces, which is the only thing that
+    // can be checked: healthy idles within +/-3 rpm, and a 6% single-cylinder
+    // misfire within +/-65 rpm. The earlier coefficients gave +/-15 rpm, which
+    // is a shake no one would feel and no analysis should call unstable.
+    const roughness = 1.4 + this.faults.misfireRate * 2400;
     rpm += this.prng.gaussian() * roughness * Math.sqrt(dt);
 
     if (this.faults.misfireRate > 0 && this.prng.chance(this.faults.misfireRate * dt * 60)) {
@@ -693,8 +700,15 @@ export class EngineModel {
     // fan or a blocked core shows up at a standstill long before it does on
     // the motorway. `4` is the small loss straight off the block, which is
     // all that escapes while the thermostat is shut.
+    // The fan term matters: without it a healthy engine revved at a standstill
+    // overheated, because nothing was moving air through the core. A real fan
+    // engages once the coolant climbs, and is why that does not happen. It
+    // scales with coolingEfficiency like the rest of the system, so a failed
+    // fan still overheats the vehicle.
     const ramAir = clamp(s.vehicleSpeed / 25, 0, 1);
-    const conductance = 4 + opening * (60 + 290 * ramAir) * this.faults.coolingEfficiency;
+    const fan = !this.faults.fanFailed && s.coolantTemp > 95 ? 1 : 0;
+    const conductance =
+      4 + opening * (60 + 260 * fan + 290 * ramAir) * this.faults.coolingEfficiency;
 
     const heatOut = conductance * above;
 

@@ -215,6 +215,33 @@ shapes are what that stage will store.
   the nearest sample, and a visually hidden table so no value is gated
   behind hover.
 
+## Diagnostic analysis
+
+`src/domain/diagnostics/analysis/` turns a recorded session into evidence and
+findings. It stops at findings; naming a failed component is Stage 10.
+
+- **Evidence before conclusions.** Every `Evidence` item carries the operating
+  condition it was seen under, the parameters it came from, and the measured
+  numbers behind it. A `Finding` carries both supporting and opposing evidence,
+  so a weak case reads as a weak case (Rule 8).
+- **Condition-aware, always.** `classifyCondition` buckets each sample by what
+  the engine was actually doing. A fuel trim at idle and the same trim at 3000
+  rpm mean different things, and the analysis never averages across them.
+  Without RPM the condition is `UNKNOWN`, not a guess.
+- **Absence is reported, not filled in.** Anything the analysis could not judge
+  becomes a `limitation` on the result -- e.g. airflow plausibility needs engine
+  displacement, and says so when it is unknown rather than assuming one.
+- **Only measured samples count.** A reading with no value never becomes a data
+  point anywhere in the chain (Rule 1).
+- **Named for what it is.** `analyseIdleStability` reports the spread of engine
+  speed, and states in its own output that this is not a misfire count -- misfire
+  counters are Mode 06, which this build does not read.
+
+The engine is tested against the simulator, never against fixtures: the
+evidence it reasons over is produced by coupled physics, as it will be from a
+real vehicle. Two simulator gaps were found this way and fixed in the *model*,
+not the test -- a missing cooling fan (a healthy engine revved at a standstill
+overheated) and a misfire roughness term too small to disturb idle observably.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

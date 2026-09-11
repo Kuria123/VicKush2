@@ -58,6 +58,16 @@ export interface FaultSet {
    * runs hot; a failed fan or blocked radiator.
    */
   coolingEfficiency: number;
+  /**
+   * A dead cooling fan.
+   *
+   * Separate from `coolingEfficiency` because the fan is what moves air
+   * through the core at a standstill. Merely scaling overall efficiency left
+   * a fraction of a working fan in place, which was enough to stop the
+   * vehicle ever overheating while stationary — the exact situation where a
+   * failed fan actually bites.
+   */
+  fanFailed: boolean;
   /** A thermostat stuck open never lets the engine reach temperature. */
   thermostatStuckOpen: boolean;
 
@@ -86,6 +96,7 @@ export const HEALTHY: FaultSet = {
   fuelPressureScale: 1,
   o2Fault: 'NONE',
   coolingEfficiency: 1,
+  fanFailed: false,
   thermostatStuckOpen: false,
   batteryRestVoltage: 12.6,
   alternatorFailed: false,
@@ -185,8 +196,10 @@ export const SCENARIO_DEFINITIONS: Record<ScenarioId, ScenarioDefinition> = {
     id: 'OVERHEATING',
     label: 'Overheating',
     description:
-      'Heat rejection is down to about a third of normal — a failed fan, a blocked radiator or low coolant.',
-    faults: { coolingEfficiency: 0.32 },
+      'The cooling fan has failed and the core is partly blocked, so heat rejection collapses at a standstill.',
+    // 0.35 was not quite enough: the engine plateaued at 115 °C, just under the
+    // 118 °C limit. That is a vehicle running hot, not one overheating.
+    faults: { coolingEfficiency: 0.28, fanFailed: true },
   },
 
   LOW_BATTERY: {
