@@ -47,7 +47,14 @@ export function registerBuiltInProviders(): void {
   // the provider already had. The provider itself did not change.
   registerProvider(
     SIMULATED_PROVIDER_ID,
-    () => new SimulatedVehicleDataProvider({ source: new VehicleSimulator() }),
+    () =>
+      new SimulatedVehicleDataProvider({
+        source: new VehicleSimulator(),
+        // Stands in for an adapter's initialisation handshake, which on a
+        // real ELM327 takes a second or two. This is the only pause in the
+        // connection sequence — every other step waits on actual work.
+        connectDelayMs: 700,
+      }),
   );
 }
 

@@ -15,7 +15,7 @@ import { faultsForScenario, isScenarioId, SCENARIOS, type ScenarioId } from './f
  * by the physical model in `engine-model.ts`.
  *
  * It implements the Stage 5 `TelemetrySource` seam, so
- * `SimulatedVehicleDataProvider` picks it up without changing â€” the whole
+ * `SimulatedVehicleDataProvider` picks it up without changing — the whole
  * point of having built the architecture first.
  *
  * Time is advanced in fixed 10 ms steps regardless of how often `sample` is
@@ -76,7 +76,7 @@ export class VehicleSimulator implements TelemetrySource {
     return this.scenario;
   }
 
-  /** Driver input: accelerator position, 0â€“100. */
+  /** Driver input: accelerator position, 0–100. */
   setThrottle(percent: number): void {
     this.input = { ...this.input, throttle: Math.min(100, Math.max(0, percent)) };
   }

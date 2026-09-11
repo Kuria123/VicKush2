@@ -67,8 +67,11 @@ test('profile reports unavailable metrics instead of inventing them', async ({ p
   await expect(page.getByText('Not available')).toHaveCount(4);
   await expect(page.getByText(/No scan has ever been run/)).toBeVisible();
 
-  // Actions that cannot work are disabled rather than merely decorative.
-  for (const label of ['Connect vehicle', 'Run diagnostic', 'View history']) {
+  // Connecting works as of Stage 7, so it is a real link now.
+  await expect(page.getByRole('link', { name: 'Connect vehicle' })).toBeVisible();
+
+  // The rest still cannot work, so they stay disabled rather than decorative.
+  for (const label of ['Run diagnostic', 'View history']) {
     await expect(page.getByRole('button', { name: new RegExp(label, 'i') })).toBeDisabled();
   }
 });
@@ -107,7 +110,7 @@ test('refuses a duplicate VIN for the same owner', async ({ page }) => {
   await expect(page).toHaveURL(VEHICLE_PROFILE_URL);
 
   await addVehicle(page, { make: 'Toyota', model: 'Harrier', vin: VALID_VIN });
-  // Reported twice by design â€” once for the form, once against the field.
+  // Reported twice by design — once for the form, once against the field.
   await expect(page.locator('form [role="alert"]')).toContainText(
     /already have a vehicle with that VIN/i,
   );

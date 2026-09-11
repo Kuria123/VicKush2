@@ -5,6 +5,7 @@ export { Input, Select, type InputProps, type SelectProps } from './Field';
 export { Meter, type MeterProps, type MeterTone } from './Meter';
 export { Modal, type ModalProps } from './Modal';
 export { Readout, type ReadingState, type ReadoutProps } from './Readout';
+export { SimulationBanner } from './SimulationBanner';
 export { Sparkline, type SparklineProps } from './Sparkline';
 export { Spinner, type SpinnerProps } from './Spinner';
 export { StatusIndicator, type StatusIndicatorProps, type StatusTone } from './StatusIndicator';

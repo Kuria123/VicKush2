@@ -171,6 +171,26 @@ aspirated petrol engine with a CVT. It plugs into the Stage 5
   healthy engine idling from cold must not trip P0128 — check that margin if
   you retune the thermal model.
 
+## Vehicle connection
+
+`src/features/connection` drives the discovery sequence. It runs **client
+side**, and deliberately so: Web Bluetooth and WebUSB are browser APIs, so
+the real adapters that replace the simulator in Stage 24 live in exactly the
+same place. The server never handles raw telemetry — it will persist finished
+sessions only, from Stage 15.
+
+- **Each phase performs a real operation** and reports what came back. The
+  only pause is the provider's own connect handshake, standing in for an
+  adapter initialising. Never pad the sequence to look busy.
+- **`isSimulated` is read on mount, not on connect.** The SIMULATION MODE
+  banner must appear before the data it discloses, not after.
+- **Report what was actually returned.** A VIN the adapter cannot read says
+  so; a module that does not answer is counted separately from those that do.
+  Never round a partial result up into a clean one.
+- Simulator controls render only when the provider declares
+  `FAULT_INJECTION`, which only a simulator may do — so they are unreachable
+  against a real vehicle.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

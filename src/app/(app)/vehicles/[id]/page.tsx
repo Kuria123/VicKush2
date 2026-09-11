@@ -135,12 +135,18 @@ export default async function VehiclePage(props: PageProps<'/vehicles/[id]'>) {
       <Card>
         <p className="label-technical">Actions</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <DisabledAction label="Connect vehicle" stage="Stage 7" />
+          <Link
+            href={`/vehicles/${vehicle.id}/connect`}
+            className="bg-accent text-accent-contrast hover:bg-accent-hover inline-flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors"
+          >
+            Connect vehicle
+          </Link>
           <DisabledAction label="Run diagnostic" stage="Stage 9" />
           <DisabledAction label="View history" stage="Stage 15" />
         </div>
         <p className="text-content-muted mt-4 text-xs">
-          These are disabled because the functionality behind them does not exist yet.
+          Connecting uses a simulated vehicle and says so on screen. The greyed-out actions are
+          disabled because the functionality behind them does not exist yet.
         </p>
       </Card>
     </div>
