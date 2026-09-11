@@ -10,11 +10,13 @@ import {
   SimulationBanner,
   StatusIndicator,
   Table,
+  Tabs,
 } from '@/components/ui';
 import { FEATURED_TREND_PARAMETERS } from '@/domain/diagnostics';
 import { getParameter, parseDtc, describeDtcStructure } from '@/domain/telemetry';
 import { SimulationControls } from '@/features/connection/SimulationControls';
 import { useVehicleConnection } from '@/features/connection/useVehicleConnection';
+import { DiagnosisTab } from '@/features/diagnostics/DiagnosisTab';
 
 import { ParameterGrid } from './ParameterGrid';
 import { TrendChart, type TrendTone } from './TrendChart';
@@ -27,7 +29,13 @@ const TREND_TONES: Record<string, TrendTone> = {
   MAF_RATE: 'accent',
 };
 
-export function LiveScanPanel({ vehicleName }: { vehicleName: string }) {
+export interface LiveScanPanelProps {
+  vehicleName: string;
+  /** From the vehicle record. Absent facts limit what the diagnosis can check. */
+  engineDisplacementCc?: number | null;
+}
+
+export function LiveScanPanel({ vehicleName, engineDisplacementCc = null }: LiveScanPanelProps) {
   const connection = useVehicleConnection();
   const [throttleHint, setThrottleHint] = useState(false);
 
@@ -41,8 +49,67 @@ export function LiveScanPanel({ vehicleName }: { vehicleName: string }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Outside the tabs: the disclosure must be visible whichever is open. */}
       <SimulationBanner isSimulated={connection.isSimulated} />
 
+      <Tabs
+        items={[
+          {
+            value: 'scan',
+            label: 'Live scan',
+            content: (
+              <ScanTab
+                connection={connection}
+                scan={scan}
+                byId={byId}
+                summary={summary}
+                throttleHint={throttleHint}
+                setThrottleHint={setThrottleHint}
+                vehicleName={vehicleName}
+              />
+            ),
+          },
+          {
+            value: 'diagnosis',
+            label: 'Diagnosis',
+            content: (
+              <DiagnosisTab
+                session={scan.session}
+                scanning={scan.scanning}
+                sampleCount={summary?.sampleCount ?? 0}
+                isSimulated={connection.isSimulated}
+                engineDisplacementCc={engineDisplacementCc}
+              />
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+type Connection = ReturnType<typeof useVehicleConnection>;
+type Scan = ReturnType<typeof useLiveScan>;
+
+function ScanTab({
+  connection,
+  scan,
+  byId,
+  summary,
+  throttleHint,
+  setThrottleHint,
+  vehicleName,
+}: {
+  connection: Connection;
+  scan: Scan;
+  byId: Map<string, Scan['tracks'][number]>;
+  summary: Scan['summary'];
+  throttleHint: boolean;
+  setThrottleHint: (fn: (v: boolean) => boolean) => void;
+  vehicleName: string;
+}) {
+  return (
+    <div className="flex flex-col gap-6">
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
@@ -174,13 +241,14 @@ export function LiveScanPanel({ vehicleName }: { vehicleName: string }) {
           onScenarioChange={connection.setScenario}
           onInjectDtc={connection.injectDtc}
           onClearFaults={connection.clearFaults}
+          onThrottleChange={connection.setThrottle ?? undefined}
           disabled={!connection.ready}
         />
       )}
 
       <p className="text-content-muted text-xs">
         Scanning {vehicleName}. Nothing on this screen is saved yet — sessions are persisted from
-        Stage 15, and interpreting these readings is the diagnostic engine in Stage 9.
+        Stage 15. Stop the scan and open the Diagnosis tab to interpret these readings.
       </p>
     </div>
   );

@@ -17,7 +17,7 @@ export default async function LiveScanPage(props: PageProps<'/vehicles/[id]/live
   const result = await getVehicleForOwner(id, userId);
   if (!result) notFound();
 
-  const { name, spec } = result;
+  const { name, spec, vehicle } = result;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -36,7 +36,10 @@ export default async function LiveScanPage(props: PageProps<'/vehicles/[id]/live
         {spec && <p className="text-content-secondary mt-1 text-sm">{spec}</p>}
       </header>
 
-      <LiveScanPanel vehicleName={name} />
+      <LiveScanPanel
+        vehicleName={name}
+        engineDisplacementCc={vehicle.configuration?.engineDisplacementCc ?? null}
+      />
     </div>
   );
 }

@@ -29,6 +29,17 @@ export interface TelemetrySource {
   injectDtc(code: string): void;
   clearInjectedFaults(): void;
   reset(): void;
+
+  /**
+   * Accelerator position, 0–100, for sources that model one.
+   *
+   * Optional because not every source has a driver. It exists because the
+   * diagnosis asks the user to raise engine speed and compare — that
+   * comparison is what separates an unmetered air leak from a proportional
+   * fuelling error — and a product that asks for a condition it gives no way
+   * to produce has asked for nothing.
+   */
+  setThrottle?(percent: number): void;
 }
 
 /**

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -44,6 +44,8 @@ export interface UseVehicleConnectionResult extends ConnectionState {
   setScenario: (scenario: string) => void;
   injectDtc: (code: string) => string | null;
   clearFaults: () => void;
+  /** Null when the provider does not model a driver, so the UI can omit it. */
+  setThrottle: ((percent: number) => void) | null;
 }
 
 export function useVehicleConnection(): UseVehicleConnectionResult {
@@ -275,6 +277,18 @@ export function useVehicleConnection(): UseVehicleConnectionResult {
     if (provider && supportsFaultInjection(provider)) provider.clearInjectedFaults();
   }, []);
 
+  const setThrottle = useCallback((percent: number) => {
+    const instance = providerRef.current;
+    if (instance && supportsFaultInjection(instance)) instance.setThrottle?.(percent);
+  }, []);
+
+  // Read from state rather than the ref: this decides whether a control is
+  // rendered, and reading a ref during render is not allowed.
+  const canThrottle =
+    provider !== null &&
+    supportsFaultInjection(provider) &&
+    typeof provider.setThrottle === 'function';
+
   return {
     phases,
     ready,
@@ -291,5 +305,6 @@ export function useVehicleConnection(): UseVehicleConnectionResult {
     setScenario,
     injectDtc,
     clearFaults,
+    setThrottle: canThrottle ? setThrottle : null,
   };
 }

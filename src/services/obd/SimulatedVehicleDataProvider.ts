@@ -307,4 +307,15 @@ export class SimulatedVehicleDataProvider implements FaultInjectingProvider {
     this.startedAt = this.now();
     return providerOk(undefined);
   }
+
+  setThrottle(percent: number): ProviderResult<void> {
+    if (!this.source.setThrottle) {
+      return providerFail('NOT_SUPPORTED', 'This simulated source does not model a driver.');
+    }
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+      return providerFail('NOT_SUPPORTED', 'Throttle must be between 0 and 100.');
+    }
+    this.source.setThrottle(percent);
+    return providerOk(undefined);
+  }
 }

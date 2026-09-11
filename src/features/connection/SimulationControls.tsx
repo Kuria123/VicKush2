@@ -22,6 +22,7 @@ export function SimulationControls({
   onScenarioChange,
   onInjectDtc,
   onClearFaults,
+  onThrottleChange,
   disabled,
 }: {
   scenarios: readonly string[];
@@ -29,11 +30,13 @@ export function SimulationControls({
   onScenarioChange: (scenario: string) => void;
   onInjectDtc: (code: string) => string | null;
   onClearFaults: () => void;
+  onThrottleChange?: (percent: number) => void;
   disabled: boolean;
 }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [injected, setInjected] = useState<string[]>([]);
+  const [throttle, setThrottle] = useState(0);
 
   if (scenarios.length === 0) return null;
 
@@ -77,6 +80,40 @@ export function SimulationControls({
             label: SCENARIO_DEFINITIONS[id as ScenarioId]?.label ?? id,
           }))}
         />
+
+        {/* The diagnosis asks the user to raise engine speed and compare the
+            fuel trims — that comparison is what separates an unmetered air
+            leak from a proportional fuelling error. Without a pedal, the
+            request could never be met. */}
+        {onThrottleChange && (
+          <div>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3">
+              <label htmlFor="sim-throttle" className="text-content-secondary text-sm">
+                Throttle
+              </label>
+              <span className="tabular text-content text-sm font-medium">{throttle}%</span>
+            </div>
+            <input
+              id="sim-throttle"
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={throttle}
+              disabled={disabled}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                setThrottle(next);
+                onThrottleChange(next);
+              }}
+              className="accent-accent w-full disabled:opacity-40"
+            />
+            <p className="text-content-muted mt-1 text-xs">
+              Hold above idle for half a minute and scan again to capture a second operating
+              condition.
+            </p>
+          </div>
+        )}
 
         {definition && (
           <p className="border-line text-content-secondary rounded-md border px-3 py-2 text-sm">

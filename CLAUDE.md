@@ -301,6 +301,36 @@ offers that one. A stored tree would enumerate every path in advance and go
 stale the moment a cause is added (Rule 13). The spec's example path -- trim
 high at idle, raise the engine speed, see whether it falls -- is what that
 rule produces from `trim-response-to-airflow`.
+## Diagnostic result experience
+
+`src/features/diagnostics/` renders the diagnosis. It is laid out as the six
+questions a person actually asks, in that order: what happened, why and how
+confident, what else could cause it, what to test, what to do next.
+
+- **Confidence is never just a number.** The headline is a verdict about
+  whether the evidence separates the candidates at all. When it does not, the
+  screen says so and puts the settling test next. Every percentage is backed by
+  an expandable list of the observations that produced it, each with its reason
+  and the points it carried.
+- **Why something was dismissed is never collapsed.** A ruled-out cause shows
+  its exclusion openly -- that is the part a user most needs to be able to
+  disagree with.
+- **A diagnosis runs on a stopped session, not a live one.** Analysing a
+  session still filling would rewrite the answer several times a second, and a
+  differential exists to weigh a body of evidence, not the first seconds of it.
+- **The disclosure sits outside the tabs**, so switching to the diagnosis
+  cannot hide SIMULATION MODE (Rule 2).
+- `/diagnostics` lists nothing and says why, rather than showing an empty list
+  that implies a history exists. Sessions live in the browser until Stage 15.
+
+**The simulator gained a throttle control**, on the simulator-only interface.
+The diagnosis asks the user to raise engine speed and compare the fuel trims --
+that comparison is what separates an unmetered air leak from a proportional
+fuelling error -- and without a pedal the request could never be met. A product
+that asks for a condition it gives no way to produce has asked for nothing.
+`setThrottle` is optional on `TelemetrySource` and `FaultInjectingProvider`, so
+the contract suite is unchanged and it stays unreachable against a real
+vehicle, where the accelerator is not ours to move.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

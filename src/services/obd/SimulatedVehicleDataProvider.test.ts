@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { VehicleSimulator } from '@/domain/simulation';
 import { StaticTelemetrySource, supportsFaultInjection } from '@/domain/telemetry';
 
 import { SimulatedVehicleDataProvider } from './SimulatedVehicleDataProvider';
@@ -19,6 +20,25 @@ describe('SimulatedVehicleDataProvider — specifics', () => {
     expect(capabilities).not.toContain('READ_FREEZE_FRAME');
     expect(capabilities).not.toContain('READ_READINESS_MONITORS');
     expect(capabilities).not.toContain('READ_VIN');
+  });
+
+  it('drives the simulated accelerator and refuses an impossible position', () => {
+    const provider = new SimulatedVehicleDataProvider({ source: new VehicleSimulator() });
+    expect(provider.setThrottle(30).ok).toBe(true);
+    expect(provider.setThrottle(0).ok).toBe(true);
+    expect(provider.setThrottle(100).ok).toBe(true);
+
+    // Rule 3: an out-of-range request is reported, not clamped silently.
+    expect(provider.setThrottle(140).ok).toBe(false);
+    expect(provider.setThrottle(-5).ok).toBe(false);
+    expect(provider.setThrottle(Number.NaN).ok).toBe(false);
+  });
+
+  it('says so when the source models no driver', () => {
+    const provider = new SimulatedVehicleDataProvider({ source: new StaticTelemetrySource() });
+    const result = provider.setThrottle(30);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.code).toBe('NOT_SUPPORTED');
   });
 
   it('reports no VIN rather than inventing one', async () => {

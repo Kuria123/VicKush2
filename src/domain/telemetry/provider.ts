@@ -97,6 +97,16 @@ export interface FaultInjectingProvider extends VehicleDataProvider {
   injectDtc(code: string): ProviderResult<void>;
   clearInjectedFaults(): ProviderResult<void>;
   reset(): ProviderResult<void>;
+
+  /**
+   * Drives the simulated accelerator, 0–100.
+   *
+   * Optional: a simulator need not model a driver. Where it does, this is
+   * what lets the user produce the second operating condition the diagnosis
+   * asks for. It is on the simulator-only interface, so it is unreachable
+   * against a real vehicle — where the accelerator is not ours to move.
+   */
+  setThrottle?(percent: number): ProviderResult<void>;
 }
 
 export function supportsFaultInjection(
