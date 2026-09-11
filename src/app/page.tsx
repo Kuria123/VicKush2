@@ -27,8 +27,8 @@ export default async function HomePage() {
           className="mx-auto mt-4 max-w-md text-sm leading-relaxed sm:text-base"
           style={{ color: 'var(--text-secondary)' }}
         >
-          A structured diagnostic platform built on evidence, not guesswork.
-          Currently in early development.
+          A structured diagnostic platform built on evidence, not guesswork. Currently in early
+          development.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

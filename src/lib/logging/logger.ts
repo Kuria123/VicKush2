@@ -49,12 +49,8 @@ function emit(level: LogLevel, message: string, context?: LogContext): void {
 }
 
 export const logger = {
-  debug: (message: string, context?: LogContext) =>
-    emit('debug', message, context),
-  info: (message: string, context?: LogContext) =>
-    emit('info', message, context),
-  warn: (message: string, context?: LogContext) =>
-    emit('warn', message, context),
-  error: (message: string, context?: LogContext) =>
-    emit('error', message, context),
+  debug: (message: string, context?: LogContext) => emit('debug', message, context),
+  info: (message: string, context?: LogContext) => emit('info', message, context),
+  warn: (message: string, context?: LogContext) => emit('warn', message, context),
+  error: (message: string, context?: LogContext) => emit('error', message, context),
 };

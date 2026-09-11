@@ -9,6 +9,10 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [['html', { open: 'never' }], ['list']],
+  // Password hashing is bcrypt at cost 12 and runs twice per sign-up, on a
+  // dev server that also compiles routes on first hit. The default 5s
+  // assertion timeout is not enough for the credential flows.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',

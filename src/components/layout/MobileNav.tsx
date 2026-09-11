@@ -34,9 +34,7 @@ export function MobileNav() {
           <nav aria-label="Primary mobile">
             <ul className="flex flex-col p-3">
               {NAV_ITEMS.map((item) => {
-                const active =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <li key={item.href}>
                     <Link

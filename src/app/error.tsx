@@ -23,9 +23,7 @@ export default function GlobalError({
       >
         Error
       </p>
-      <h1 className="text-xl font-semibold tracking-tight">
-        Something went wrong
-      </h1>
+      <h1 className="text-xl font-semibold tracking-tight">Something went wrong</h1>
       <p className="max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>
         The page could not be rendered.
         {error.digest ? ` Reference: ${error.digest}` : ''}

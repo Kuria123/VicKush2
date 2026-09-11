@@ -30,9 +30,7 @@ export default async function DashboardPage() {
         >
           Registered vehicles
         </p>
-        <p className="mt-2 text-3xl font-semibold tabular-nums">
-          {vehicleCount}
-        </p>
+        <p className="mt-2 text-3xl font-semibold tabular-nums">{vehicleCount}</p>
         <p className="mt-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
           {vehicleCount === 0
             ? 'No vehicles registered. Vehicle management is built in Stage 4.'
@@ -42,16 +40,12 @@ export default async function DashboardPage() {
 
       <section className="mt-6">
         <h2 className="text-sm font-medium">What exists today</h2>
-        <ul
-          className="mt-3 flex flex-col gap-2 text-sm"
-          style={{ color: 'var(--text-secondary)' }}
-        >
+        <ul className="mt-3 flex flex-col gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
           <li>Authentication, backed by MySQL.</li>
           <li>Application shell and navigation.</li>
           <li>
-            Everything else is marked{' '}
-            <span style={{ color: 'var(--text-muted)' }}>Planned</span> in the
-            sidebar and renders no data.
+            Everything else is marked <span style={{ color: 'var(--text-muted)' }}>Planned</span> in
+            the sidebar and renders no data.
           </li>
         </ul>
         <p className="mt-4 text-sm">

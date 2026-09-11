@@ -1,11 +1,6 @@
 import type { NextAuthConfig } from 'next-auth';
 
-import {
-  DEFAULT_SIGNED_IN_REDIRECT,
-  SIGN_IN_PATH,
-  isAuthPage,
-  isProtectedPath,
-} from './routes';
+import { DEFAULT_SIGNED_IN_REDIRECT, SIGN_IN_PATH, isAuthPage, isProtectedPath } from './routes';
 
 /**
  * Edge-safe Auth.js configuration.
@@ -26,9 +21,7 @@ export const authConfig = {
 
       if (isAuthPage(pathname)) {
         if (isSignedIn) {
-          return Response.redirect(
-            new URL(DEFAULT_SIGNED_IN_REDIRECT, nextUrl),
-          );
+          return Response.redirect(new URL(DEFAULT_SIGNED_IN_REDIRECT, nextUrl));
         }
         return true;
       }

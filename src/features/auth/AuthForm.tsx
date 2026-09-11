@@ -5,10 +5,7 @@ import { useFormStatus } from 'react-dom';
 
 import type { ActionResult } from '@/types';
 
-type AuthAction = (
-  prev: ActionResult | null,
-  formData: FormData,
-) => Promise<ActionResult>;
+type AuthAction = (prev: ActionResult | null, formData: FormData) => Promise<ActionResult>;
 
 interface Field {
   name: string;
@@ -42,10 +39,7 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 export function AuthForm({ action, fields, submitLabel }: AuthFormProps) {
-  const [state, formAction] = useActionState<ActionResult | null, FormData>(
-    action,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionResult | null, FormData>(action, null);
 
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
   const formError = state && !state.ok ? state.error : null;
@@ -88,20 +82,12 @@ export function AuthForm({ action, fields, submitLabel }: AuthFormProps) {
               style={{ backgroundColor: 'var(--surface-base)' }}
             />
             {field.hint && (
-              <p
-                id={hintId}
-                className="text-xs"
-                style={{ color: 'var(--text-muted)' }}
-              >
+              <p id={hintId} className="text-xs" style={{ color: 'var(--text-muted)' }}>
                 {field.hint}
               </p>
             )}
             {fieldError && (
-              <p
-                id={errorId}
-                className="text-xs"
-                style={{ color: 'var(--color-status-fault)' }}
-              >
+              <p id={errorId} className="text-xs" style={{ color: 'var(--color-status-fault)' }}>
                 {fieldError}
               </p>
             )}

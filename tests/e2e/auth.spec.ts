@@ -35,9 +35,7 @@ test('sign up, land on dashboard, sign out, sign back in', async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard/);
 });
 
-test('rejects a wrong password without revealing account existence', async ({
-  page,
-}) => {
+test('rejects a wrong password without revealing account existence', async ({ page }) => {
   const email = uniqueEmail();
 
   await page.goto('/sign-up');
@@ -47,21 +45,22 @@ test('rejects a wrong password without revealing account existence', async ({
   await page.getByRole('button', { name: /create account/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   await page.getByRole('button', { name: /sign out/i }).click();
+  // Wait for sign-out to land: navigating while the session cookie is still
+  // live would be bounced straight back to the dashboard by the proxy.
+  await expect(page).toHaveURL('/');
 
   await page.goto('/sign-in');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill('WrongPassword9');
   await page.getByRole('button', { name: /^sign in$/i }).click();
 
-  await expect(page.getByRole('alert')).toContainText(
-    /invalid email or password/i,
-  );
+  // Scoped to the form: Next renders its own role="alert" route announcer,
+  // so a bare getByRole('alert') is ambiguous.
+  await expect(page.locator('form [role="alert"]')).toContainText(/invalid email or password/i);
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test('signed-in user visiting an auth page is redirected to the dashboard', async ({
-  page,
-}) => {
+test('signed-in user visiting an auth page is redirected to the dashboard', async ({ page }) => {
   const email = uniqueEmail();
 
   await page.goto('/sign-up');

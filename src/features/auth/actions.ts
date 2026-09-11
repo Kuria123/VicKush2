@@ -7,11 +7,7 @@ import { prisma } from '@/lib/db/client';
 import { signIn } from '@/lib/auth';
 import { hashPassword } from '@/lib/auth/password';
 import { logger } from '@/lib/logging/logger';
-import {
-  fieldErrors,
-  signInSchema,
-  signUpSchema,
-} from '@/lib/validation/schemas';
+import { fieldErrors, signInSchema, signUpSchema } from '@/lib/validation/schemas';
 import { DEFAULT_SIGNED_IN_REDIRECT } from '@/lib/auth/routes';
 import type { ActionResult } from '@/types';
 

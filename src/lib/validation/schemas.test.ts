@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import {
-  emailSchema,
-  fieldErrors,
-  passwordSchema,
-  signInSchema,
-  signUpSchema,
-} from './schemas';
+import { emailSchema, fieldErrors, passwordSchema, signInSchema, signUpSchema } from './schemas';
 
 describe('emailSchema', () => {
   it('normalises case and surrounding whitespace', () => {
@@ -58,9 +52,7 @@ describe('signInSchema', () => {
   it('does not enforce password strength on sign-in', () => {
     // Existing accounts may predate a stricter policy; strength is only
     // enforced at sign-up.
-    expect(
-      signInSchema.safeParse({ email: 'a@b.com', password: 'x' }).success,
-    ).toBe(true);
+    expect(signInSchema.safeParse({ email: 'a@b.com', password: 'x' }).success).toBe(true);
   });
 });
 

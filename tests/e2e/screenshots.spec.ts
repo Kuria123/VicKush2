@@ -29,14 +29,9 @@ for (const vp of VIEWPORTS) {
 
       // No page may scroll horizontally at any width.
       const overflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth -
-          document.documentElement.clientWidth,
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
       );
-      expect(
-        overflow,
-        `horizontal overflow on ${p.name} @ ${vp.name}`,
-      ).toBeLessThanOrEqual(0);
+      expect(overflow, `horizontal overflow on ${p.name} @ ${vp.name}`).toBeLessThanOrEqual(0);
 
       await page.screenshot({
         path: `.playwright/shots/${p.name}-${vp.name}.png`,

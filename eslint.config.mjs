@@ -43,14 +43,7 @@ const config = [
         {
           patterns: [
             {
-              group: [
-                'next',
-                'next/*',
-                'react',
-                'react-dom',
-                '@/lib/db*',
-                '@/generated/*',
-              ],
+              group: ['next', 'next/*', 'react', 'react-dom', '@/lib/db*', '@/generated/*'],
               message:
                 'src/domain must remain pure. Move I/O and framework code into src/services or src/lib.',
             },

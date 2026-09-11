@@ -3,16 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { isAuthPage, isProtectedPath } from './routes';
 
 describe('isProtectedPath', () => {
-  it.each([
-    '/dashboard',
-    '/vehicles',
-    '/diagnostics',
-    '/live-scan',
-    '/health',
-    '/settings',
-  ])('protects %s', (path) => {
-    expect(isProtectedPath(path)).toBe(true);
-  });
+  it.each(['/dashboard', '/vehicles', '/diagnostics', '/live-scan', '/health', '/settings'])(
+    'protects %s',
+    (path) => {
+      expect(isProtectedPath(path)).toBe(true);
+    },
+  );
 
   it('protects nested routes', () => {
     expect(isProtectedPath('/vehicles/abc123')).toBe(true);

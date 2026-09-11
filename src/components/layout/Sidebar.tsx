@@ -26,8 +26,7 @@ export function Sidebar() {
 
       <ul className="flex flex-1 flex-col gap-0.5 p-3">
         {NAV_ITEMS.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <li key={item.href}>
               <Link

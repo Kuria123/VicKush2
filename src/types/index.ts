@@ -6,5 +6,4 @@
 
 /** Result of an operation that can fail in an expected, presentable way. */
 export type ActionResult<T = void> =
-  | { ok: true; data: T }
-  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+  { ok: true; data: T } | { ok: false; error: string; fieldErrors?: Record<string, string> };

@@ -33,16 +33,9 @@ export default function SignInPage() {
         ]}
       />
 
-      <p
-        className="mt-6 text-center text-sm"
-        style={{ color: 'var(--text-secondary)' }}
-      >
+      <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
         No account?{' '}
-        <Link
-          href="/sign-up"
-          className="font-medium"
-          style={{ color: 'var(--accent)' }}
-        >
+        <Link href="/sign-up" className="font-medium" style={{ color: 'var(--accent)' }}>
           Create one
         </Link>
       </p>

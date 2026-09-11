@@ -13,16 +13,11 @@ export function TopBar({ userLabel }: TopBarProps) {
     >
       <div className="flex items-center gap-3">
         <MobileNav />
-        <span className="text-sm font-semibold tracking-tight md:hidden">
-          AutoMind
-        </span>
+        <span className="text-sm font-semibold tracking-tight md:hidden">AutoMind</span>
       </div>
 
       <div className="flex items-center gap-3">
-        <span
-          className="hidden text-sm sm:inline"
-          style={{ color: 'var(--text-secondary)' }}
-        >
+        <span className="hidden text-sm sm:inline" style={{ color: 'var(--text-secondary)' }}>
           {userLabel}
         </span>
         <form
