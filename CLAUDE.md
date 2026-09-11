@@ -111,6 +111,38 @@ mirrors its enums exactly and the service layer maps them 1:1.
   cannot forget it.
 - Deletes are soft: diagnostic history will reference vehicles from Stage 15.
 
+## Vehicle data providers
+
+`src/domain/telemetry` defines the `VehicleDataProvider` contract; concrete
+providers live in `src/services/obd`. Everything above that line — the
+diagnostic engine, services, UI — depends on the interface and never on a
+transport.
+
+- **Ask the registry, never construct a provider directly.**
+  `src/services/obd/registry.ts` is the only place a transport is chosen.
+- **Every new provider must pass `provider-contract.ts` unchanged.** That
+  shared suite, not the interface, is what makes providers substitutable. If
+  a provider needs the contract relaxed, the contract is probably right and
+  the provider is wrong.
+- **Declare capabilities truthfully.** `describe()` is how callers learn what
+  is possible. A capability that is listed but not implemented makes the UI
+  offer an action that cannot work (Stage 25's rule, enforced from the start).
+- **Return outcomes, do not throw them.** An unsupported PID, a silent module
+  or a timeout are results. Exceptions are for programmer error only.
+- **A reading either has a value or has a reason, never both.**
+  `SensorReading` is a union, so a missing reading is structurally incapable
+  of carrying a number.
+- **`isSimulated` is mandatory on every descriptor** — it is what every UI
+  surface reads to decide it must show SIMULATION MODE (Rule 2), so a new
+  provider cannot quietly omit the disclosure.
+- **Fault injection lives on a separate interface**, reachable only through
+  `supportsFaultInjection`, so no diagnostic code can depend on being able to
+  fabricate a fault.
+- The parameter catalogue holds real SAE J1979 PIDs and the ranges the
+  encoding permits. Misfire counters are absent on purpose: they are Mode 06,
+  not Mode 01. DTC structure is parsed; DTC _meaning_ is not, because there
+  is no authoritative fault table yet.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
