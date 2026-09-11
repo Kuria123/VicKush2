@@ -143,6 +143,34 @@ transport.
   not Mode 01. DTC structure is parsed; DTC _meaning_ is not, because there
   is no authoritative fault table yet.
 
+## Vehicle simulator
+
+`src/domain/simulation` is a mean-value physical model of a 2.0 L naturally
+aspirated petrol engine with a CVT. It plugs into the Stage 5
+`TelemetrySource` seam, so the provider never changed to accommodate it.
+
+- **Faults change physics, never outputs.** A vacuum leak is a fixed-area
+  hole; a MAF fault is a scaling error on the sensor. Sensor signatures then
+  emerge. Never add a fault that writes a reading directly — that would let a
+  diagnostic engine pass tests it should fail.
+- **DTCs are raised by conditions, never by scenario name.** A leak, weak
+  injectors and a weak pump all set P0171 because all three genuinely run
+  lean. Wiring scenario→code would let the diagnostic engine cheat by reading
+  the code instead of the evidence.
+- **Faults that look alike must stay separable.** MAF fault vs weak injectors
+  differ in reported airflow; weak pump vs weak injectors differ in rail
+  pressure. `fuelDeliveryScale` and `fuelPressureScale` are separate for
+  exactly this reason.
+- **It is a model of the configuration, not of Toyota's calibration.** That is
+  proprietary and unknowable here. It reproduces the relationships a
+  technician reads, not the exact numbers a specific vehicle shows.
+- **Deterministic**: seeded PRNG plus fixed 10 ms integration, so the same
+  scenario always yields the same telemetry and the same codes regardless of
+  sampling cadence.
+- Thresholds are tuned against the model and documented on each rule. A
+  healthy engine idling from cold must not trip P0128 — check that margin if
+  you retune the thermal model.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

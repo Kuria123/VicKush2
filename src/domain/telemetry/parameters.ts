@@ -279,6 +279,29 @@ export const PARAMETERS = [
   },
 
   {
+    id: 'O2_S1_VOLTAGE',
+    pid: 0x14,
+    name: 'Oxygen sensor 1 voltage (bank 1, sensor 1)',
+    shortName: 'O2 S1',
+    unit: 'V',
+    min: 0,
+    max: 1.275,
+    decimals: 3,
+    group: 'FUEL',
+  },
+  {
+    id: 'O2_S1_LAMBDA',
+    pid: 0x24,
+    name: 'Oxygen sensor 1 equivalence ratio (wide range)',
+    shortName: 'λ S1',
+    unit: 'λ',
+    min: 0,
+    max: 2,
+    decimals: 3,
+    group: 'FUEL',
+  },
+
+  {
     id: 'CONTROL_MODULE_VOLTAGE',
     pid: 0x42,
     name: 'Control module voltage',

@@ -1,5 +1,7 @@
 import type { ProviderDescriptor, VehicleDataProvider } from '@/domain/telemetry';
 
+import { VehicleSimulator } from '@/domain/simulation';
+
 import { SimulatedVehicleDataProvider } from './SimulatedVehicleDataProvider';
 
 /**
@@ -41,7 +43,12 @@ export function resetRegistry(): void {
 export const SIMULATED_PROVIDER_ID = 'simulated';
 
 export function registerBuiltInProviders(): void {
-  registerProvider(SIMULATED_PROVIDER_ID, () => new SimulatedVehicleDataProvider());
+  // The Stage 6 physical model drops straight into the TelemetrySource seam
+  // the provider already had. The provider itself did not change.
+  registerProvider(
+    SIMULATED_PROVIDER_ID,
+    () => new SimulatedVehicleDataProvider({ source: new VehicleSimulator() }),
+  );
 }
 
 registerBuiltInProviders();
