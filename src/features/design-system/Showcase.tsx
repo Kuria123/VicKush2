@@ -98,11 +98,11 @@ function ToastDemo() {
   );
 }
 
-const UNAVAILABLE_STATES: readonly Exclude<ReadingState, 'available'>[] = [
-  'unavailable',
-  'unsupported',
-  'not-reading',
-  'error',
+const UNAVAILABLE_STATES: readonly Exclude<ReadingState, 'AVAILABLE'>[] = [
+  'UNAVAILABLE',
+  'UNSUPPORTED',
+  'NOT_READING',
+  'ERROR',
 ];
 
 export function DesignSystemShowcase() {

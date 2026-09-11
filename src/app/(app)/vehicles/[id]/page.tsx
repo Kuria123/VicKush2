@@ -72,10 +72,10 @@ export default async function VehiclePage(props: PageProps<'/vehicles/[id]'>) {
       {/* Status strip — every figure here is genuinely unavailable today. */}
       <Card className="mb-6">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <Readout label="Health" state="unavailable" />
-          <Readout label="Last scan" state="unavailable" />
-          <Readout label="Active issues" state="unavailable" />
-          <Readout label="Maintenance" state="unavailable" />
+          <Readout label="Health" state="UNAVAILABLE" />
+          <Readout label="Last scan" state="UNAVAILABLE" />
+          <Readout label="Active issues" state="UNAVAILABLE" />
+          <Readout label="Maintenance" state="UNAVAILABLE" />
         </div>
         <p className="text-content-muted border-line mt-5 border-t pt-4 text-xs">
           No scan has ever been run, so there is nothing to report. Health scoring arrives in Stage
@@ -140,6 +140,12 @@ export default async function VehiclePage(props: PageProps<'/vehicles/[id]'>) {
             className="bg-accent text-accent-contrast hover:bg-accent-hover inline-flex h-9 items-center rounded-md px-4 text-sm font-medium transition-colors"
           >
             Connect vehicle
+          </Link>
+          <Link
+            href={`/vehicles/${vehicle.id}/live-scan`}
+            className="border-line hover:bg-surface-sunken inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium transition-colors"
+          >
+            Live scan
           </Link>
           <DisabledAction label="Run diagnostic" stage="Stage 9" />
           <DisabledAction label="View history" stage="Stage 15" />

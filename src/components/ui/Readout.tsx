@@ -1,24 +1,31 @@
 import { cn } from '@/lib/utilities/cn';
 import { Sparkline } from './Sparkline';
 
+import type { ReadingStateCode } from '@/domain/telemetry';
+
 /**
  * Why a parameter has no value. Every diagnostic reading carries one of
  * these; "no data" is never rendered as a zero or a dash-shaped guess.
+ *
+ * The codes come from the telemetry domain, which owns the vocabulary. This
+ * component originally declared its own lowercase variant, written before
+ * the domain existed; two spellings of the same idea invited exactly the
+ * mapping bug they usually cause.
  */
-export type ReadingState = 'available' | 'unavailable' | 'unsupported' | 'not-reading' | 'error';
+export type ReadingState = ReadingStateCode;
 
-const STATE_TEXT: Record<Exclude<ReadingState, 'available'>, string> = {
-  unavailable: 'Not available',
-  unsupported: 'Not supported',
-  'not-reading': 'Not reading',
-  error: 'Read error',
+const STATE_TEXT: Record<Exclude<ReadingState, 'AVAILABLE'>, string> = {
+  UNAVAILABLE: 'Not available',
+  UNSUPPORTED: 'Not supported',
+  NOT_READING: 'Not reading',
+  ERROR: 'Read error',
 };
 
-const STATE_TONE: Record<Exclude<ReadingState, 'available'>, string> = {
-  unavailable: 'text-content-muted',
-  unsupported: 'text-content-muted',
-  'not-reading': 'text-content-muted',
-  error: 'text-status-fault',
+const STATE_TONE: Record<Exclude<ReadingState, 'AVAILABLE'>, string> = {
+  UNAVAILABLE: 'text-content-muted',
+  UNSUPPORTED: 'text-content-muted',
+  NOT_READING: 'text-content-muted',
+  ERROR: 'text-status-fault',
 };
 
 interface ReadoutBase {
@@ -31,7 +38,7 @@ interface ReadoutBase {
 }
 
 interface AvailableReadout extends ReadoutBase {
-  state?: 'available';
+  state?: 'AVAILABLE';
   value: number | string;
   /** Signed change against `deltaPeriod`. */
   delta?: number;
@@ -47,7 +54,7 @@ interface AvailableReadout extends ReadoutBase {
 }
 
 interface UnavailableReadout extends ReadoutBase {
-  state: Exclude<ReadingState, 'available'>;
+  state: Exclude<ReadingState, 'AVAILABLE'>;
   /** A parameter without a reading cannot carry a value. Enforced by the type. */
   value?: never;
   delta?: never;
@@ -59,7 +66,7 @@ export type ReadoutProps = AvailableReadout | UnavailableReadout;
 export function Readout(props: ReadoutProps) {
   const { label, unit, className } = props;
 
-  if (props.state && props.state !== 'available') {
+  if (props.state && props.state !== 'AVAILABLE') {
     return (
       <div className={cn('min-w-0', className)}>
         <p className="label-technical">{label}</p>

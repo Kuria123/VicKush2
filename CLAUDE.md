@@ -191,6 +191,30 @@ sessions only, from Stage 15.
   `FAULT_INJECTION`, which only a simulator may do — so they are unreachable
   against a real vehicle.
 
+## Live scan
+
+`src/domain/diagnostics` defines a session; `src/features/live-scan` streams
+into it. Persistence is Stage 15 — the session is in-memory for now, and its
+shapes are what that stage will store.
+
+- **A sample with no value never becomes a point.** The gap in the series is
+  the honest record of a parameter that stopped answering. Never interpolate
+  across it and never plot a zero.
+- **Every requested parameter is shown with its state**, including the ones
+  the vehicle does not support. Absent and unsupported are different facts.
+- **Capabilities the product cannot obtain are listed and explained** rather
+  than silently omitted — misfire counters need Mode 06, which this build
+  does not read.
+- **Colour on this screen never implies a diagnosis.** A tone is applied only
+  where a value has a defensible normal range; interpretation is Stage 9.
+- The session mutates in place and a version counter drives re-render.
+  Copying a 900-point buffer across eighteen parameters five times a second
+  to satisfy immutability would be a great deal of garbage for no benefit.
+- Charts follow the house mark specs: 2 px line, 10% area wash, r=4 end
+  marker with a 2 px surface ring, hairline gridlines, crosshair snapping to
+  the nearest sample, and a visually hidden table so no value is gated
+  behind hover.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
