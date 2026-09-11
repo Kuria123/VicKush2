@@ -79,6 +79,7 @@ export function LiveScanPanel({ vehicleName, engineDisplacementCc = null }: Live
                 sampleCount={summary?.sampleCount ?? 0}
                 isSimulated={connection.isSimulated}
                 engineDisplacementCc={engineDisplacementCc}
+                vehicleName={vehicleName}
               />
             ),
           },

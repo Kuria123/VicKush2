@@ -15,6 +15,7 @@ import type { DifferentialVerdict } from '@/domain/differential';
 import { describeDtcStructure, parseDtc } from '@/domain/telemetry';
 
 import { CauseCard } from './CauseCard';
+import { ExplanationPanel } from './ExplanationPanel';
 import { TestPanel } from './TestPanel';
 
 /**
@@ -36,6 +37,7 @@ export interface DiagnosticResultProps {
   differential: ConfirmedDifferential | null;
   results: readonly TestResult[];
   isSimulated: boolean;
+  vehicleName?: string | null;
   onRecordResult: (testId: string, outcome: TestOutcome, note?: string) => void;
   onClearResult: (testId: string) => void;
   onClearAllResults: () => void;
@@ -63,6 +65,7 @@ export function DiagnosticResult({
   differential,
   results,
   isSimulated,
+  vehicleName = null,
   onRecordResult,
   onClearResult,
   onClearAllResults,
@@ -220,6 +223,15 @@ export function DiagnosticResult({
       </Section>
 
       <DtcSection analysis={analysis} />
+
+      {/* Last on the page on purpose: everything above is deterministic and
+          stands without it. */}
+      <ExplanationPanel
+        analysis={analysis}
+        differential={differential}
+        vehicleName={vehicleName}
+        isSimulated={isSimulated}
+      />
     </div>
   );
 }

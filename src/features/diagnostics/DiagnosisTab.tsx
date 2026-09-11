@@ -22,6 +22,7 @@ export interface DiagnosisTabProps {
   sampleCount: number;
   isSimulated: boolean;
   engineDisplacementCc: number | null;
+  vehicleName?: string | null;
 }
 
 export function DiagnosisTab({
@@ -30,6 +31,7 @@ export function DiagnosisTab({
   sampleCount,
   isSimulated,
   engineDisplacementCc,
+  vehicleName = null,
 }: DiagnosisTabProps) {
   const diagnosis = useDiagnosis({
     session: scanning ? null : session,
@@ -55,6 +57,7 @@ export function DiagnosisTab({
       differential={diagnosis.differential}
       results={diagnosis.results}
       isSimulated={isSimulated}
+      vehicleName={vehicleName}
       onRecordResult={diagnosis.recordResult}
       onClearResult={diagnosis.clearResult}
       onClearAllResults={diagnosis.clearAllResults}

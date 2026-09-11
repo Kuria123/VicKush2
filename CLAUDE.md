@@ -331,6 +331,38 @@ that asks for a condition it gives no way to produce has asked for nothing.
 `setThrottle` is optional on `TelemetrySource` and `FaultInjectingProvider`, so
 the contract suite is unchanged and it stays unreachable against a real
 vehicle, where the accelerator is not ours to move.
+## AI diagnostic layer
+
+`src/domain/ai` defines the contract, the context and the grounding check;
+`src/services/ai` holds the implementations. The AI sits at the END of the
+chain -- it explains what the deterministic engine concluded and concludes
+nothing itself (Rule 8).
+
+- **The context is closed.** `buildDiagnosticContext` serialises the
+  measurements, findings, ranked causes and stated limits, and that is all the
+  model ever sees. No tools, no retrieval, no vehicle access. Anything it says
+  that is not derivable from that text is, by construction, invented.
+- **The output is checked before anyone sees it.** `checkGrounding` rejects a
+  number absent from the context, a stated meaning for a fault code, a part
+  recommendation, or a claim about whether the vehicle is safe to drive. A
+  rejected explanation is withheld entirely -- a fabricated reading in fluent
+  prose is worse than no explanation, because it is indistinguishable from a
+  real one. Prompting reduces this; it does not remove it, which is why the
+  check exists.
+- **The scenario name is never in the context.** A simulated session knows
+  which fault was injected; telling the model would let it name the answer
+  without reasoning from the evidence, and every explanation would look
+  excellent and mean nothing.
+- **Unconfigured means unconfigured.** With no API key the layer reports
+  NOT_CONFIGURED. It does not fall back to a template that stitches findings
+  into sentences -- that would be a mail merge presented as AI reasoning.
+- **A malformed reply is a failed call**, not something to salvage.
+- `/api/ai/explain` requires sign-in and bounds the payload. Without that it
+  would be an open proxy onto this deployment's API budget.
+
+Set `ANTHROPIC_API_KEY` (and optionally `ANTHROPIC_MODEL`) in `.env.local` to
+enable it. The structured diagnosis is complete without it, and the panel sits
+last on the page for that reason.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
