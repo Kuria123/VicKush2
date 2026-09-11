@@ -83,16 +83,107 @@ model VerificationToken {
 }
 
 // ---------------------------------------------------------------------------
-// Vehicle — MINIMAL Phase 1 placeholder
+// Vehicle domain (Stage 3)
+//
+// Every descriptive field is nullable and NULL always means "not known". A
+// missing value is never backfilled with a plausible default (Rule 1).
+//
+// These enums mirror src/domain/vehicles/types.ts exactly. The domain owns the
+// vocabulary; this schema persists it.
 // ---------------------------------------------------------------------------
+
+enum FuelType {
+  PETROL
+  DIESEL
+  HYBRID_PETROL
+  HYBRID_DIESEL
+  PLUG_IN_HYBRID
+  ELECTRIC
+  LPG
+  CNG
+  OTHER
+}
+
+enum TransmissionType {
+  MANUAL
+  AUTOMATIC
+  CVT
+  DUAL_CLUTCH
+  AUTOMATED_MANUAL
+  REDUCTION_GEAR
+  OTHER
+}
+
+enum DriveType {
+  FWD
+  RWD
+  AWD
+  FOUR_WD
+}
+
+enum ObdProtocol {
+  SAE_J1850_PWM
+  SAE_J1850_VPW
+  ISO_9141_2
+  ISO_14230_4_KWP_5BAUD
+  ISO_14230_4_KWP_FAST
+  ISO_15765_4_CAN_11B_500K
+  ISO_15765_4_CAN_29B_500K
+  ISO_15765_4_CAN_11B_250K
+  ISO_15765_4_CAN_29B_250K
+  SAE_J1939_CAN
+  UNKNOWN
+}
+
+enum ModuleSystem {
+  ENGINE
+  TRANSMISSION
+  ABS
+  SRS
+  BODY
+  CLIMATE
+  INSTRUMENT_CLUSTER
+  STEERING
+  IMMOBILISER
+  HYBRID_BATTERY
+  OTHER
+}
+
+enum ModuleStatus {
+  DETECTED
+  NOT_RESPONDING
+  NOT_SUPPORTED
+  ERROR
+  UNKNOWN
+}
+
+enum IdentificationSource {
+  USER_ENTERED
+  VIN_DECODED
+  OBD_REPORTED
+  UNKNOWN
+}
+
+enum IdentificationStatus {
+  UNIDENTIFIED
+  PARTIALLY_IDENTIFIED
+  IDENTIFIED
+  CONFLICTED
+}
 
 model Vehicle {
   id      String @id @default(cuid())
   ownerId String
 
-  make  String @db.VarChar(64)
-  model String @db.VarChar(64)
-  year  Int    @db.SmallInt
+  /// Optional nickname, e.g. "The white one".
+  displayName String? @db.VarChar(80)
+
+  make  String? @db.VarChar(64)
+  model String? @db.VarChar(64)
+  year  Int?    @db.SmallInt
+
+  /// Normalised (uppercase, separators stripped) by the service layer.
+  vin String? @db.VarChar(17)
 
   isPrimary Boolean   @default(false)
   deletedAt DateTime?
@@ -100,9 +191,103 @@ model Vehicle {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner          User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  identification VehicleIdentification?
+  configuration  VehicleConfiguration?
+  modules        VehicleModule[]
 
+  /// Scoped to the owner rather than globally: the same physical vehicle can
+  /// legitimately be registered by a new owner after a sale. MySQL permits
+  /// repeated NULLs, so vehicles without a VIN do not collide.
+  @@unique([ownerId, vin])
   @@index([ownerId])
   @@index([ownerId, deletedAt])
   @@map("vehicles")
+}
+
+/// A derived snapshot, recomputed from the vehicle's facts by
+/// src/domain/vehicles/identification.ts on every write. Persisted so it can
+/// be queried and sorted; the domain function remains the source of truth.
+/// Contributions and gaps are deliberately NOT stored — they are recomputed,
+/// so they can never go stale against the facts.
+model VehicleIdentification {
+  id        String @id @default(cuid())
+  vehicleId String @unique
+
+  status     IdentificationStatus @default(UNIDENTIFIED)
+  /// 0–100.
+  confidence Int                  @default(0)
+  source     IdentificationSource @default(UNKNOWN)
+
+  /// NULL when no VIN is recorded, so the question was never asked.
+  vinStructurallyValid Boolean?
+  /// NULL when it could not be evaluated. FALSE is informative, not
+  /// disqualifying: the check digit is not part of ISO 3779 outside North
+  /// America (see src/domain/vehicles/vin.ts).
+  vinCheckDigitValid   Boolean?
+
+  /// Set when two sources disagree about the same vehicle.
+  hasConflict Boolean @default(false)
+
+  assessedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("vehicle_identifications")
+}
+
+model VehicleConfiguration {
+  id        String @id @default(cuid())
+  vehicleId String @unique
+
+  engineCode           String? @db.VarChar(32)
+  engineDisplacementCc Int?    @db.SmallInt
+  engineCylinders      Int?    @db.TinyInt
+
+  fuelType          FuelType?
+  transmissionType  TransmissionType?
+  transmissionGears Int?              @db.TinyInt
+  driveType         DriveType?
+
+  ecuName     String?      @db.VarChar(64)
+  obdProtocol ObdProtocol?
+  /// NULL means we have not established whether the vehicle speaks OBD-II.
+  supportsObd2 Boolean?
+
+  source IdentificationSource @default(UNKNOWN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("vehicle_configurations")
+}
+
+model VehicleModule {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  name   String       @db.VarChar(64)
+  system ModuleSystem @default(OTHER)
+  /// ECU address exactly as reported, e.g. "7E0".
+  address String?     @db.VarChar(8)
+
+  protocol ObdProtocol?
+  status   ModuleStatus @default(UNKNOWN)
+
+  discoveredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  /// One record per address per vehicle.
+  @@unique([vehicleId, address])
+  @@index([vehicleId])
+  @@index([vehicleId, system])
+  @@map("vehicle_modules")
 }

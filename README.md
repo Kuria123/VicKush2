@@ -44,8 +44,10 @@ Open http://localhost:3000.
 ## Verifying
 
 ```bash
-npm run verify     # typecheck + lint + unit tests + build
-npm run test:e2e   # Playwright, needs a working DATABASE_URL
+npm run verify     # typecheck + lint + unit + integration + build
+npm test           # unit tests only, no database needed
+npm run test:int   # integration tests, needs DATABASE_URL
+npm run test:e2e   # Playwright, needs DATABASE_URL
 ```
 
 ## Layout

@@ -13,6 +13,8 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules/**', '.next/**', 'tests/e2e/**'],
+    // Integration tests need a database and run under
+    // vitest.integration.config.ts instead.
+    exclude: ['node_modules/**', '.next/**', 'tests/e2e/**', 'src/**/*.int.test.ts'],
   },
 });

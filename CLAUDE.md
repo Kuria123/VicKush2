@@ -11,7 +11,8 @@ comes late (Stage 24+).
 | `npm run build`       | Production build (runs a type check)          |
 | `npm run typecheck`   | `tsc --noEmit`                                |
 | `npm run lint`        | ESLint                                        |
-| `npm test`            | Vitest unit tests                             |
+| `npm test`            | Vitest unit tests (no database needed)        |
+| `npm run test:int`    | Integration tests against the real database   |
 | `npm run test:e2e`    | Playwright (Microsoft Edge channel)           |
 | `npm run db:migrate`  | Create + apply a migration                    |
 | `npm run db:generate` | Regenerate the Prisma client                  |
@@ -84,6 +85,31 @@ in the current theme — use the theme switch in the top bar to check both.
   states are a separate type in a discriminated union, so a missing reading
   is a compile error rather than a fabricated number (Rule 1).
 - Dark mode is a deliberate re-step of the ramps, not an automatic flip.
+
+## Vehicle domain
+
+`src/domain/vehicles` owns the vocabulary and the rules; the Prisma schema
+mirrors its enums exactly and the service layer maps them 1:1.
+
+- **NULL means "not known", always.** No descriptive field is ever backfilled
+  with a plausible default.
+- **VIN: structure is a hard rule, the check digit is only a signal.** The
+  check digit is mandatory under FMVSS 565 but is *not* part of ISO 3779
+  worldwide, and Japanese-market vehicles — most of the imported fleet this
+  product targets — routinely fail it. A failed check digit lowers confidence
+  and is shown to the user; it never rejects the VIN.
+- **No WMI-to-manufacturer decoding.** That needs an authoritative table the
+  project does not have; guessing one would fabricate vehicle data.
+- **Confidence is a transparent sum of evidence**, never a generated number.
+  Weights total 100 and every contribution carries the reason it was awarded,
+  so a score can always be explained back to the user.
+- **The stored identification is a derived snapshot**, recomputed inside the
+  same transaction as any fact that feeds it, so it cannot drift. The
+  contributions and gaps are deliberately *not* stored — they are recomputed,
+  so they can never go stale.
+- **Ownership is enforced in the query**, not checked afterwards, so a caller
+  cannot forget it.
+- Deletes are soft: diagnostic history will reference vehicles from Stage 15.
 
 ## Non-negotiable rules
 
