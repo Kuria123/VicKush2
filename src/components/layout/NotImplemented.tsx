@@ -1,4 +1,6 @@
-interface NotImplementedProps {
+import { EmptyState } from '@/components/ui';
+
+export interface NotImplementedProps {
   title: string;
   /** The roadmap stage that will deliver this screen. */
   stage: string;
@@ -13,23 +15,19 @@ interface NotImplementedProps {
  */
 export function NotImplemented({ title, stage, description }: NotImplementedProps) {
   return (
-    <section className="mx-auto max-w-lg py-16 text-center">
-      <p
-        className="font-mono text-xs tracking-widest uppercase"
-        style={{ color: 'var(--text-muted)' }}
-      >
-        Not implemented
-      </p>
-      <h1 className="mt-3 text-xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-        {description}
-      </p>
-      <p
-        className="mt-6 inline-block rounded-md border px-3 py-1.5 text-xs"
-        style={{ color: 'var(--text-muted)' }}
-      >
-        Planned for {stage}
-      </p>
-    </section>
+    <EmptyState
+      eyebrow="Not implemented"
+      title={title}
+      description={
+        <>
+          <span>{description}</span>
+          <span className="mt-4 block">
+            <span className="border-line text-content-muted inline-block rounded-md border px-3 py-1.5 text-xs">
+              Planned for {stage}
+            </span>
+          </span>
+        </>
+      }
+    />
   );
 }

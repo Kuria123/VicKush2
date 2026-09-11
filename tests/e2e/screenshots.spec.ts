@@ -36,6 +36,9 @@ for (const vp of VIEWPORTS) {
       await page.screenshot({
         path: `.playwright/shots/${p.name}-${vp.name}.png`,
         fullPage: true,
+        // See design-system.spec.ts: the default caret hiding triggers a
+        // spurious hydration mismatch on pages containing inputs.
+        caret: 'initial',
       });
     });
   }

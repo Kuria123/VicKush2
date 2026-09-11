@@ -1,5 +1,7 @@
 import { signOut } from '@/lib/auth';
+import { Button } from '@/components/ui';
 import { MobileNav } from './MobileNav';
+import { ThemeToggle } from './ThemeToggle';
 
 interface TopBarProps {
   userLabel: string;
@@ -7,31 +9,24 @@ interface TopBarProps {
 
 export function TopBar({ userLabel }: TopBarProps) {
   return (
-    <header
-      className="relative flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4"
-      style={{ backgroundColor: 'var(--surface-raised)' }}
-    >
+    <header className="border-line bg-surface-raised relative flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4">
       <div className="flex items-center gap-3">
         <MobileNav />
-        <span className="text-sm font-semibold tracking-tight md:hidden">AutoMind</span>
+        <span className="font-semibold tracking-tight md:hidden">AutoMind</span>
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="hidden text-sm sm:inline" style={{ color: 'var(--text-secondary)' }}>
-          {userLabel}
-        </span>
+        <span className="text-content-secondary hidden text-sm sm:inline">{userLabel}</span>
+        <ThemeToggle />
         <form
           action={async () => {
             'use server';
             await signOut({ redirectTo: '/' });
           }}
         >
-          <button
-            type="submit"
-            className="rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-[var(--surface-sunken)]"
-          >
+          <Button type="submit" variant="secondary" size="sm">
             Sign out
-          </button>
+          </Button>
         </form>
       </div>
     </header>

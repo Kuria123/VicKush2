@@ -61,6 +61,30 @@ unit-testable in isolation.
 - Only Microsoft Edge is installed on the dev machine, so Playwright uses
   `channel: 'msedge'`.
 
+## Design system
+
+Component reference: `/design-system` (signed in). It renders every component
+in the current theme — use the theme switch in the top bar to check both.
+
+- **Use semantic tokens, never raw ramp values.** `bg-surface-raised`,
+  `text-content-muted`, `border-line` — not `bg-graphite-900`. The raw ramps
+  exist only to define the semantics in `globals.css`.
+- **No inline `style` for colour.** Semantic tokens are declared with
+  `@theme inline`, so they compile to real utilities that follow the theme.
+- **Text and mark colours are different tokens.** `--status-warn` is text-safe
+  (WCAG AA 4.5:1); `--status-warn-mark` is the vivid fill/stroke, which only
+  needs the 3:1 graphic threshold. Fills, dots and strokes use `-mark`; text
+  never does. Same split for `--telemetry`.
+- **Every text pairing is verified, not estimated.** 26 token pairings are
+  checked against WCAG AA in both themes. If you change a colour, re-check it.
+- **Animation must mean something**: a live stream, work in progress, or a
+  fault needing attention. Never decorative. All motion respects
+  `prefers-reduced-motion`.
+- **`Readout` cannot display a value it does not have.** The unavailable
+  states are a separate type in a discriminated union, so a missing reading
+  is a compile error rather than a fabricated number (Rule 1).
+- Dark mode is a deliberate re-step of the ramps, not an automatic flip.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

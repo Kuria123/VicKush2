@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 
+import { Button } from '@/components/ui';
+
 export default function GlobalError({
   error,
   reset,
@@ -16,25 +18,19 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-      <p
-        className="font-mono text-xs tracking-widest uppercase"
-        style={{ color: 'var(--color-status-fault)' }}
-      >
-        Error
-      </p>
+    <div
+      role="alert"
+      className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center"
+    >
+      <p className="label-technical text-status-fault">Error</p>
       <h1 className="text-xl font-semibold tracking-tight">Something went wrong</h1>
-      <p className="max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>
+      <p className="text-content-secondary max-w-sm text-sm">
         The page could not be rendered.
         {error.digest ? ` Reference: ${error.digest}` : ''}
       </p>
-      <button
-        type="button"
-        onClick={reset}
-        className="rounded-md border px-4 py-2 text-sm transition-colors hover:bg-[var(--surface-sunken)]"
-      >
+      <Button variant="secondary" onClick={reset}>
         Try again
-      </button>
+      </Button>
     </div>
   );
 }

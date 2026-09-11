@@ -1,17 +1,27 @@
 @import 'tailwindcss';
 
-/*
- * AutoMind design tokens — Phase 1 scaffold only.
+/* ==========================================================================
+ * AutoMind design system — tokens
  *
- * This is the minimum palette and scale needed for a coherent base layout.
- * The full design system (components, states, charts, motion) is Stage 2.
+ * Visual language: graphite instrument surfaces, electric blue for action,
+ * cyan reserved exclusively for live telemetry. Restrained and technical,
+ * not neon.
  *
- * Visual language: graphite instrument surfaces, electric blue as the primary
- * action colour, cyan reserved for live telemetry. Restrained, not neon.
- */
+ * Semantic tokens are declared with `@theme inline` so they compile to real
+ * Tailwind utilities (bg-surface-raised, text-muted, border-strong) that
+ * emit `var(--…)` rather than a frozen colour. That indirection is what lets
+ * a single `data-theme` swap retheme the whole application.
+ *
+ * Rule: components use semantic tokens. Raw ramp values (graphite-700) are
+ * for defining semantics here, not for use in components.
+ * ========================================================================== */
+
+/* Class/attribute-driven dark variant, for the rare escape hatch. Most
+ * theming happens automatically through the semantic tokens below. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme {
-  /* Graphite surface ramp */
+  /* --- Raw ramps -------------------------------------------------------- */
   --color-graphite-50: #f5f7fa;
   --color-graphite-100: #e9edf3;
   --color-graphite-200: #cfd6e0;
@@ -24,82 +34,350 @@
   --color-graphite-900: #12161d;
   --color-graphite-950: #0b0e13;
 
-  /* Electric blue — primary action */
+  --color-electric-300: #8dbcff;
   --color-electric-400: #4d9bff;
   --color-electric-500: #1a7fff;
   --color-electric-600: #0062e0;
+  --color-electric-700: #004db3;
 
-  /* Cyan — reserved for live telemetry signal */
+  --color-signal-300: #7ce9e7;
   --color-signal-400: #3ddbd9;
   --color-signal-500: #12b8b6;
+  --color-signal-600: #0e9391;
+  --color-signal-700: #0a706e;
 
-  /* Diagnostic status */
-  --color-status-ok: #2ec27e;
-  --color-status-warn: #e5a50a;
-  --color-status-fault: #e0464b;
+  --color-ok-400: #4ade80;
+  --color-ok-500: #2ec27e;
+  --color-ok-600: #1f9d63;
+  --color-ok-700: #177a4c;
+  --color-warn-400: #fbbf24;
+  --color-warn-500: #e5a50a;
+  --color-warn-600: #b98307;
+  --color-warn-700: #8f6405;
+  --color-fault-400: #f87171;
+  --color-fault-500: #e0464b;
+  --color-fault-600: #c0272c;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', 'Roboto Mono', monospace;
+  /* The 700 steps exist because the 600s fail WCAG AA as text on their own
+   * subtle chips (ok 3.10:1, warn 3.01:1). Verified, not estimated. */
+
+  /* --- Typography ------------------------------------------------------- */
+  /* Base is 14px: technical interfaces are dense, and instrument readouts
+   * carry emphasis through weight and tabular figures rather than size. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, 'Cascadia Code', monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.95rem;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 2.35rem;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 2.75rem;
+
+  /* --- Radii ------------------------------------------------------------ */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* --- Motion ----------------------------------------------------------- */
+  /* Every animation here has a job: show a live connection, show work in
+   * progress, or draw attention to a fault. Nothing decorative. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+
+  --animate-pulse-signal: pulse-signal 2s var(--ease-in-out-quart) infinite;
+  --animate-sweep: sweep 1.4s linear infinite;
+  --animate-attention: attention 1.8s var(--ease-in-out-quart) infinite;
+  --animate-rise: rise 0.24s var(--ease-out-quint);
+
+  @keyframes pulse-signal {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.55;
+      transform: scale(0.88);
+    }
+  }
+  @keyframes sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
+  @keyframes attention {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
-/*
- * Semantic surface variables. Components reference these rather than raw ramp
- * values, so the light/dark mapping lives in exactly one place.
- */
+/* --- Semantic tokens as utilities ---------------------------------------
+ * `inline` keeps the var reference in the generated utility, so these follow
+ * the theme instead of baking in a light-mode colour. */
+@theme inline {
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-inset: var(--surface-inset);
+
+  --color-line: var(--border-default);
+  --color-line-strong: var(--border-strong);
+
+  --color-content: var(--text-primary);
+  --color-content-secondary: var(--text-secondary);
+  --color-content-muted: var(--text-muted);
+  --color-content-inverted: var(--text-inverted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-contrast: var(--accent-contrast);
+
+  --color-telemetry: var(--telemetry);
+  --color-telemetry-mark: var(--telemetry-mark);
+  --color-telemetry-subtle: var(--telemetry-subtle);
+
+  --color-status-ok: var(--status-ok);
+  --color-status-ok-mark: var(--status-ok-mark);
+  --color-status-ok-subtle: var(--status-ok-subtle);
+  --color-status-warn: var(--status-warn);
+  --color-status-warn-mark: var(--status-warn-mark);
+  --color-status-warn-subtle: var(--status-warn-subtle);
+  --color-status-fault: var(--status-fault);
+  --color-status-fault-mark: var(--status-fault-mark);
+  --color-status-fault-subtle: var(--status-fault-subtle);
+  --color-status-idle: var(--status-idle);
+  --color-status-idle-subtle: var(--status-idle-subtle);
+}
+
+/* --- Light theme (default) ----------------------------------------------- */
 :root {
   --surface-base: var(--color-graphite-50);
   --surface-raised: #ffffff;
   --surface-sunken: var(--color-graphite-100);
-  --surface-border: var(--color-graphite-200);
+  --surface-inset: #ffffff;
+  --surface-overlay: rgb(11 14 19 / 0.45);
+
+  --border-default: var(--color-graphite-200);
+  --border-strong: var(--color-graphite-300);
+
   --text-primary: var(--color-graphite-900);
   --text-secondary: var(--color-graphite-500);
-  --text-muted: var(--color-graphite-400);
+  /* Not graphite-400: that is 4.05:1 on white and 3.78:1 on the base
+   * surface, below AA for normal text. This clears 4.5 on all three
+   * surfaces. */
+  --text-muted: #606a78;
+  --text-inverted: #ffffff;
+
   --accent: var(--color-electric-600);
+  --accent-hover: var(--color-electric-700);
+  --accent-subtle: #e6f0ff;
   --accent-contrast: #ffffff;
+
+  /* Two telemetry tokens: `telemetry` is text-safe (AA), `telemetry-mark` is
+   * the vivid data ink for strokes and dots, where the 3:1 graphic
+   * threshold applies instead. Text never wears the data colour. */
+  --telemetry: var(--color-signal-700);
+  --telemetry-mark: var(--color-signal-600);
+  --telemetry-subtle: #ddf7f6;
+
+  /* Text uses the 700 steps for AA; marks keep the vivid 600s, which only
+   * need the 3:1 graphic threshold. Without this split the warn colour
+   * reads olive-brown as a fill rather than amber. */
+  --status-ok: var(--color-ok-700);
+  --status-ok-mark: var(--color-ok-600);
+  --status-ok-subtle: #e3f7ec;
+  --status-warn: var(--color-warn-700);
+  --status-warn-mark: var(--color-warn-600);
+  --status-warn-subtle: #fdf3dc;
+  --status-fault: var(--color-fault-600);
+  --status-fault-mark: var(--color-fault-500);
+  --status-fault-subtle: #fdeaea;
+  --status-idle: #606a78;
+  --status-idle-subtle: var(--color-graphite-100);
+
+  --glass-bg: rgb(255 255 255 / 0.72);
+  --grid-line: var(--color-graphite-200);
+  color-scheme: light;
 }
 
+/* Dark values, shared by the system preference and the explicit choice. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --surface-base: var(--color-graphite-950);
     --surface-raised: var(--color-graphite-900);
     --surface-sunken: var(--color-graphite-800);
-    --surface-border: var(--color-graphite-700);
+    --surface-inset: var(--color-graphite-950);
+    --surface-overlay: rgb(0 0 0 / 0.6);
+
+    --border-default: var(--color-graphite-700);
+    --border-strong: var(--color-graphite-600);
+
     --text-primary: var(--color-graphite-50);
     --text-secondary: var(--color-graphite-300);
-    --text-muted: var(--color-graphite-400);
-    --accent: var(--color-electric-500);
-    --accent-contrast: #ffffff;
+    /* graphite-400 is 4.47:1 on the raised surface — just under AA. */
+    --text-muted: #7d8899;
+    --text-inverted: var(--color-graphite-950);
+
+    --accent: var(--color-electric-400);
+    --accent-hover: var(--color-electric-300);
+    --accent-subtle: rgb(26 127 255 / 0.16);
+    --accent-contrast: var(--color-graphite-950);
+
+    --telemetry: var(--color-signal-400);
+    --telemetry-mark: var(--color-signal-400);
+    --telemetry-subtle: rgb(61 219 217 / 0.14);
+
+    /* Dark steps already clear AA as text, so mark and text coincide. */
+    --status-ok: var(--color-ok-400);
+    --status-ok-mark: var(--color-ok-400);
+    --status-ok-subtle: rgb(74 222 128 / 0.14);
+    --status-warn: var(--color-warn-400);
+    --status-warn-mark: var(--color-warn-400);
+    --status-warn-subtle: rgb(251 191 36 / 0.14);
+    --status-fault: var(--color-fault-400);
+    --status-fault-mark: var(--color-fault-400);
+    --status-fault-subtle: rgb(248 113 113 / 0.14);
+    --status-idle: #7d8899;
+    --status-idle-subtle: var(--color-graphite-800);
+
+    --glass-bg: rgb(18 22 29 / 0.72);
+    --grid-line: var(--color-graphite-800);
+    color-scheme: dark;
   }
 }
 
+[data-theme='dark'] {
+  --surface-base: var(--color-graphite-950);
+  --surface-raised: var(--color-graphite-900);
+  --surface-sunken: var(--color-graphite-800);
+  --surface-inset: var(--color-graphite-950);
+  --surface-overlay: rgb(0 0 0 / 0.6);
+
+  --border-default: var(--color-graphite-700);
+  --border-strong: var(--color-graphite-600);
+
+  --text-primary: var(--color-graphite-50);
+  --text-secondary: var(--color-graphite-300);
+  /* graphite-400 is 4.47:1 on the raised surface — just under AA. */
+  --text-muted: #7d8899;
+  --text-inverted: var(--color-graphite-950);
+
+  --accent: var(--color-electric-400);
+  --accent-hover: var(--color-electric-300);
+  --accent-subtle: rgb(26 127 255 / 0.16);
+  --accent-contrast: var(--color-graphite-950);
+
+  --telemetry: var(--color-signal-400);
+  --telemetry-mark: var(--color-signal-400);
+  --telemetry-subtle: rgb(61 219 217 / 0.14);
+
+  /* Dark steps already clear AA as text, so mark and text coincide. */
+  --status-ok: var(--color-ok-400);
+  --status-ok-mark: var(--color-ok-400);
+  --status-ok-subtle: rgb(74 222 128 / 0.14);
+  --status-warn: var(--color-warn-400);
+  --status-warn-mark: var(--color-warn-400);
+  --status-warn-subtle: rgb(251 191 36 / 0.14);
+  --status-fault: var(--color-fault-400);
+  --status-fault-mark: var(--color-fault-400);
+  --status-fault-subtle: rgb(248 113 113 / 0.14);
+  --status-idle: #7d8899;
+  --status-idle-subtle: var(--color-graphite-800);
+
+  --glass-bg: rgb(18 22 29 / 0.72);
+  --grid-line: var(--color-graphite-800);
+  color-scheme: dark;
+}
+
+/* --- Base ---------------------------------------------------------------- */
 @layer base {
   * {
-    border-color: var(--surface-border);
-  }
-
-  html {
-    color-scheme: light dark;
+    border-color: var(--border-default);
   }
 
   body {
     background-color: var(--surface-base);
     color: var(--text-primary);
     font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Technical grid, used sparingly as a backdrop texture. */
-  .automind-grid {
-    background-image:
-      linear-gradient(to right, var(--surface-border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--surface-border) 1px, transparent 1px);
-    background-size: 48px 48px;
-    opacity: 0.4;
+  /* Numeric readouts must not shift width as values change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
   }
 
   :focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+}
+
+@layer components {
+  /* Technical grid backdrop. */
+  .automind-grid {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Fades a backdrop out toward the edges so it reads as texture, not chrome. */
+  .automind-grid-fade {
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+  }
+
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px) saturate(140%);
+  }
+
+  /* Instrument label: small, tracked, uppercase. */
+  .label-technical {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
   }
 }
 
@@ -110,5 +388,6 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

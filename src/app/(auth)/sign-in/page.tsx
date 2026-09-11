@@ -10,7 +10,7 @@ export default function SignInPage() {
   return (
     <>
       <h1 className="mb-1 text-lg font-semibold tracking-tight">Sign in</h1>
-      <p className="mb-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
+      <p className="text-content-secondary mb-6 text-sm">
         Access your vehicles and diagnostic history.
       </p>
 
@@ -33,9 +33,9 @@ export default function SignInPage() {
         ]}
       />
 
-      <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+      <p className="text-content-secondary mt-6 text-center text-sm">
         No account?{' '}
-        <Link href="/sign-up" className="font-medium" style={{ color: 'var(--accent)' }}>
+        <Link href="/sign-up" className="text-accent font-medium">
           Create one
         </Link>
       </p>

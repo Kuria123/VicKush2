@@ -2,10 +2,12 @@
 
 Vehicle diagnostic intelligence platform.
 
-> **Status: Phase 1 — foundation.** Authentication and the application shell
-> work. No diagnostic, telemetry or vehicle-management functionality exists
-> yet; those routes render an explicit "not implemented" page rather than
-> placeholder data.
+> **Status: Phase 2 — design system.** Authentication, the application shell
+> and the component system work. No diagnostic, telemetry or
+> vehicle-management functionality exists yet; those routes render an explicit
+> "not implemented" page rather than placeholder data.
+>
+> The component reference lives at `/design-system` once signed in.
 
 ## Requirements
 

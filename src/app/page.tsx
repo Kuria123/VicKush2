@@ -7,26 +7,19 @@ export default async function HomePage() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-6">
-      <div aria-hidden="true" className="automind-grid absolute inset-0" />
+      <div aria-hidden="true" className="automind-grid automind-grid-fade absolute inset-0" />
 
       <main className="relative max-w-xl text-center">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <span
-            aria-hidden="true"
-            className="size-2 rounded-full"
-            style={{ backgroundColor: 'var(--color-signal-500)' }}
-          />
-          <span className="text-sm font-semibold tracking-tight">AutoMind</span>
+          <span aria-hidden="true" className="bg-telemetry-mark size-2 rounded-full" />
+          <span className="font-semibold tracking-tight">AutoMind</span>
         </div>
 
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           Vehicle diagnostic intelligence
         </h1>
 
-        <p
-          className="mx-auto mt-4 max-w-md text-sm leading-relaxed sm:text-base"
-          style={{ color: 'var(--text-secondary)' }}
-        >
+        <p className="text-content-secondary mx-auto mt-4 max-w-md leading-relaxed">
           A structured diagnostic platform built on evidence, not guesswork. Currently in early
           development.
         </p>
@@ -35,11 +28,7 @@ export default async function HomePage() {
           {session?.user ? (
             <Link
               href="/dashboard"
-              className="rounded-md px-4 py-2 text-sm font-medium"
-              style={{
-                backgroundColor: 'var(--accent)',
-                color: 'var(--accent-contrast)',
-              }}
+              className="bg-accent text-accent-contrast hover:bg-accent-hover inline-flex h-11 items-center rounded-md px-5 font-medium transition-colors"
             >
               Go to dashboard
             </Link>
@@ -47,17 +36,13 @@ export default async function HomePage() {
             <>
               <Link
                 href="/sign-in"
-                className="rounded-md px-4 py-2 text-sm font-medium"
-                style={{
-                  backgroundColor: 'var(--accent)',
-                  color: 'var(--accent-contrast)',
-                }}
+                className="bg-accent text-accent-contrast hover:bg-accent-hover inline-flex h-11 items-center rounded-md px-5 font-medium transition-colors"
               >
                 Sign in
               </Link>
               <Link
                 href="/sign-up"
-                className="rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-sunken)]"
+                className="border-line bg-surface-raised hover:bg-surface-sunken inline-flex h-11 items-center rounded-md border px-5 font-medium transition-colors"
               >
                 Create account
               </Link>

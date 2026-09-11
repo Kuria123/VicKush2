@@ -30,6 +30,7 @@ test.describe('route protection', () => {
     '/live-scan',
     '/health',
     '/settings',
+    '/design-system',
   ]) {
     test(`${path} redirects when signed out`, async ({ page }) => {
       await page.goto(path);

@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   '/live-scan',
   '/health',
   '/settings',
+  '/design-system',
 ] as const;
 
 /** Auth pages that a signed-in user should be redirected away from. */

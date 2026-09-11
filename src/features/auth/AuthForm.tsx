@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 
+import { Button, Input } from '@/components/ui';
 import type { ActionResult } from '@/types';
 
 type AuthAction = (prev: ActionResult | null, formData: FormData) => Promise<ActionResult>;
@@ -24,17 +25,9 @@ interface AuthFormProps {
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className="w-full rounded-md px-4 py-2 text-sm font-medium disabled:opacity-60"
-      style={{
-        backgroundColor: 'var(--accent)',
-        color: 'var(--accent-contrast)',
-      }}
-    >
+    <Button type="submit" loading={pending} fullWidth>
       {pending ? 'Working…' : label}
-    </button>
+    </Button>
   );
 }
 
@@ -49,51 +42,24 @@ export function AuthForm({ action, fields, submitLabel }: AuthFormProps) {
       {formError && (
         <p
           role="alert"
-          className="rounded-md border px-3 py-2 text-sm"
-          style={{ color: 'var(--color-status-fault)' }}
+          className="border-status-fault bg-status-fault-subtle text-status-fault rounded-md border px-3 py-2 text-sm"
         >
           {formError}
         </p>
       )}
 
-      {fields.map((field) => {
-        const errorId = `${field.name}-error`;
-        const hintId = `${field.name}-hint`;
-        const fieldError = errors[field.name];
-
-        return (
-          <div key={field.name} className="flex flex-col gap-1.5">
-            <label htmlFor={field.name} className="text-sm font-medium">
-              {field.label}
-            </label>
-            <input
-              id={field.name}
-              name={field.name}
-              type={field.type}
-              autoComplete={field.autoComplete}
-              required
-              aria-invalid={fieldError ? true : undefined}
-              aria-describedby={
-                [fieldError ? errorId : null, field.hint ? hintId : null]
-                  .filter(Boolean)
-                  .join(' ') || undefined
-              }
-              className="rounded-md border px-3 py-2 text-sm outline-none"
-              style={{ backgroundColor: 'var(--surface-base)' }}
-            />
-            {field.hint && (
-              <p id={hintId} className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {field.hint}
-              </p>
-            )}
-            {fieldError && (
-              <p id={errorId} className="text-xs" style={{ color: 'var(--color-status-fault)' }}>
-                {fieldError}
-              </p>
-            )}
-          </div>
-        );
-      })}
+      {fields.map((field) => (
+        <Input
+          key={field.name}
+          name={field.name}
+          label={field.label}
+          type={field.type}
+          autoComplete={field.autoComplete}
+          hint={field.hint}
+          error={errors[field.name]}
+          required
+        />
+      ))}
 
       <SubmitButton label={submitLabel} />
     </form>

@@ -10,9 +10,7 @@ export default function SignUpPage() {
   return (
     <>
       <h1 className="mb-1 text-lg font-semibold tracking-tight">Create account</h1>
-      <p className="mb-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
-        Start tracking your vehicles.
-      </p>
+      <p className="text-content-secondary mb-6 text-sm">Start tracking your vehicles.</p>
 
       <AuthForm
         action={signUpAction}
@@ -35,9 +33,9 @@ export default function SignUpPage() {
         ]}
       />
 
-      <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+      <p className="text-content-secondary mt-6 text-center text-sm">
         Already registered?{' '}
-        <Link href="/sign-in" className="font-medium" style={{ color: 'var(--accent)' }}>
+        <Link href="/sign-in" className="text-accent font-medium">
           Sign in
         </Link>
       </p>
