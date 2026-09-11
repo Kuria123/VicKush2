@@ -8,6 +8,7 @@ import {
   SEVERITY_LABELS,
   SYSTEM_LABELS,
   type DiagnosticAnalysis,
+  type DiagnosticSession,
   type Finding,
   type FindingSeverity,
 } from '@/domain/diagnostics';
@@ -15,6 +16,7 @@ import type { DifferentialVerdict } from '@/domain/differential';
 import { describeDtcStructure, parseDtc } from '@/domain/telemetry';
 
 import { CauseCard } from './CauseCard';
+import { SaveSessionPanel } from './SaveSessionPanel';
 import { ExplanationPanel } from './ExplanationPanel';
 import { MechanicPanel } from './MechanicPanel';
 import { TestPanel } from './TestPanel';
@@ -39,6 +41,8 @@ export interface DiagnosticResultProps {
   results: readonly TestResult[];
   isSimulated: boolean;
   vehicleName?: string | null;
+  vehicleId?: string | null;
+  session?: DiagnosticSession | null;
   onRecordResult: (testId: string, outcome: TestOutcome, note?: string) => void;
   onClearResult: (testId: string) => void;
   onClearAllResults: () => void;
@@ -67,6 +71,8 @@ export function DiagnosticResult({
   results,
   isSimulated,
   vehicleName = null,
+  vehicleId = null,
+  session = null,
   onRecordResult,
   onClearResult,
   onClearAllResults,
@@ -224,6 +230,23 @@ export function DiagnosticResult({
       </Section>
 
       <DtcSection analysis={analysis} />
+
+      {/* Both are required: there is nothing to save without a session, and
+          nowhere to save it without a vehicle. */}
+      {vehicleId && session && (
+        <SaveSessionPanel
+          vehicleId={vehicleId}
+          session={session}
+          analysis={analysis}
+          differential={differential}
+          results={results}
+          providerName={session.providerName}
+          isSimulated={isSimulated}
+          scenario={session.summary().scenario}
+          startedAt={session.startedAt.getTime()}
+          durationMs={session.summary().durationMs}
+        />
+      )}
 
       {/* Last on the page on purpose: everything above is deterministic and
           stands without it. */}

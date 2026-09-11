@@ -31,11 +31,16 @@ const TREND_TONES: Record<string, TrendTone> = {
 
 export interface LiveScanPanelProps {
   vehicleName: string;
+  vehicleId: string;
   /** From the vehicle record. Absent facts limit what the diagnosis can check. */
   engineDisplacementCc?: number | null;
 }
 
-export function LiveScanPanel({ vehicleName, engineDisplacementCc = null }: LiveScanPanelProps) {
+export function LiveScanPanel({
+  vehicleName,
+  vehicleId,
+  engineDisplacementCc = null,
+}: LiveScanPanelProps) {
   const connection = useVehicleConnection();
   const [throttleHint, setThrottleHint] = useState(false);
 
@@ -80,6 +85,7 @@ export function LiveScanPanel({ vehicleName, engineDisplacementCc = null }: Live
                 isSimulated={connection.isSimulated}
                 engineDisplacementCc={engineDisplacementCc}
                 vehicleName={vehicleName}
+                vehicleId={vehicleId}
               />
             ),
           },

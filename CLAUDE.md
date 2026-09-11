@@ -391,6 +391,45 @@ that behaviour is enforced twice, because instructions alone do not hold:
 - `/api/ai/mechanic` requires sign-in and bounds the context, each message and
   the transcript length. An unbounded transcript is both a cost problem and a
   way to push the original instructions out of the model's attention.
+## Vehicle memory (Stage 15)
+
+`src/services/diagnostics/persistence.ts` writes a diagnosis into history;
+`history.ts` reads it back. The vehicle stops being a VIN record and becomes a
+long-term data object.
+
+- **Statistics are stored, not raw sample buffers.** A scan holds ~900 points
+  across eighteen parameters; persisting every one would be tens of thousands
+  of rows for data nothing reads back. `summariseForStorage` reduces a session
+  to per-condition summaries -- what the analysis consumes, and the only shape
+  a trend across months can be built from. The raw buffer is a live-view
+  artefact and dies with the page.
+- **A diagnosis is stored as it was reached, never recomputed on read.** The
+  engine is deterministic, so re-running it would usually agree -- but only
+  against the same catalogue. When a cause is added later, a stored diagnosis
+  must still say what the user was actually told at the time.
+- **Everything is written in one transaction, including timeline events.** A
+  timeline that disagrees with the records it describes is worse than none.
+- **Saving is explicit.** A scan run to try a scenario should not become
+  permanent history.
+- **An empty session is refused**, or the timeline would show a scan as though
+  something had been checked.
+- Ownership is part of every query, not a check afterwards.
+- Stored fault codes carry structure only. A timeline entry says the code is
+  not interpreted, because it still is not (Rule 1).
+
+## Vehicle history timeline (Stage 17)
+
+`/vehicles/[id]/history`. Grouped by month, newest first, on one rail -- the
+grouping is what makes it read as a history rather than a log.
+
+- **Every row actually happened and was recorded.** No projected, expected or
+  inferred entries.
+- **Rule 2 survives persistence.** A stored reading does not stop being
+  simulated because time has passed, so the page discloses how many of its
+  scans came from a simulator.
+- **Owner-entered maintenance is the only history predating the app's own
+  scans**, and the reason a timeline can span months. An unknown odometer stays
+  NULL and is never estimated.
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

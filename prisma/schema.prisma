@@ -195,6 +195,10 @@ model Vehicle {
   identification VehicleIdentification?
   configuration  VehicleConfiguration?
   modules        VehicleModule[]
+  scanSessions   ScanSession[]
+  events         VehicleEvent[]
+  maintenance    MaintenanceRecord[]
+  aiInteractions AiInteraction[]
 
   /// Scoped to the owner rather than globally: the same physical vehicle can
   /// legitimately be registered by a new owner after a sale. MySQL permits
@@ -290,4 +294,347 @@ model VehicleModule {
   @@index([vehicleId])
   @@index([vehicleId, system])
   @@map("vehicle_modules")
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle memory (Stage 15)
+//
+// The vehicle stops being a VIN record and becomes a long-term data object:
+// every scan, finding, ranked cause, confirmation test and AI interaction is
+// kept against it.
+//
+// Two decisions shape these tables.
+//
+// 1. **Statistics are stored, not raw sample buffers.** A scan holds roughly
+//    900 points across eighteen parameters; keeping every one would be tens of
+//    thousands of rows per session for data nothing reads back. What the
+//    analysis actually consumes — and what a trend over months needs — is the
+//    per-condition summary, so that is what is persisted. The raw buffer is a
+//    live-view artefact and is allowed to die with the page.
+//
+// 2. **A diagnosis is stored as it was reached, not recomputed on read.** The
+//    engine is deterministic, so re-running it would usually give the same
+//    answer — but only against the same catalogue. When a cause is added in a
+//    later release, a stored diagnosis must still say what the user was
+//    actually told at the time. Nothing here is regenerated.
+// ---------------------------------------------------------------------------
+
+enum DtcStatus {
+  STORED
+  PENDING
+  PERMANENT
+}
+
+enum FindingSeverity {
+  INFO
+  ADVISORY
+  SIGNIFICANT
+  SEVERE
+}
+
+enum VehicleSystem {
+  FUEL
+  AIR
+  IGNITION
+  COOLING
+  ELECTRICAL
+  TRANSMISSION
+  EMISSIONS
+  UNKNOWN
+}
+
+enum DifferentialVerdict {
+  SINGLE_LEADING
+  AMBIGUOUS
+  INSUFFICIENT
+}
+
+enum CauseStatus {
+  SUPPORTED
+  POSSIBLE
+  RULED_OUT
+}
+
+enum TestOutcome {
+  PASS
+  FAIL
+  NORMAL
+  ABNORMAL
+  UNABLE_TO_PERFORM
+  SKIP
+}
+
+enum AiInteractionKind {
+  EXPLANATION
+  CONVERSATION
+}
+
+/// One recorded scan.
+model ScanSession {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  /// Copied from the provider descriptor at the time of the scan. Kept on the
+  /// row rather than looked up later, because which adapter produced a reading
+  /// is part of what the reading means — and Rule 2 depends on it surviving.
+  providerName String  @db.VarChar(64)
+  isSimulated  Boolean
+  /// The simulated fault, when there was one. NULL for a real vehicle.
+  scenario     String? @db.VarChar(48)
+
+  startedAt DateTime
+  endedAt   DateTime?
+
+  sampleCount Int @default(0)
+  durationMs  Int @default(0)
+
+  /// Operating conditions the scan actually covered, e.g. ["IDLE","LIGHT_LOAD"].
+  /// What a scan did NOT cover is what limits a diagnosis, so it is recorded.
+  conditionsObserved Json
+
+  createdAt DateTime @default(now())
+
+  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  dtcs       SessionDtc[]
+  parameters ParameterStat[]
+  diagnosis  Diagnosis?
+  events     VehicleEvent[]
+
+  @@index([vehicleId, startedAt])
+  @@map("scan_sessions")
+}
+
+/// A fault code as reported during a scan. Structure only — this build has no
+/// authoritative table of meanings, so none is stored (Rule 1).
+model SessionDtc {
+  id        String @id @default(cuid())
+  sessionId String
+
+  code   String    @db.VarChar(8)
+  status DtcStatus @default(STORED)
+  /// The module that reported it, exactly as given.
+  moduleAddress String? @db.VarChar(8)
+
+  firstSeenAt DateTime
+
+  session ScanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, code])
+  @@index([sessionId])
+  @@map("session_dtcs")
+}
+
+/// Per-parameter, per-condition summary for one scan.
+///
+/// This is the trend spine: a battery declining across three sessions is this
+/// table read over time, which is what Stage 21 will do.
+model ParameterStat {
+  id        String @id @default(cuid())
+  sessionId String
+
+  parameterId String @db.VarChar(48)
+  /// IDLE, LIGHT_LOAD, CRUISE, HIGH_LOAD, DECELERATION, CRANKING, UNKNOWN.
+  condition   String @db.VarChar(24)
+
+  samples Int
+  mean    Float
+  min     Float
+  max     Float
+  unit    String? @db.VarChar(16)
+
+  session ScanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, parameterId, condition])
+  @@index([sessionId])
+  @@index([parameterId])
+  @@map("parameter_stats")
+}
+
+/// The diagnosis reached from a scan, exactly as it was reached.
+model Diagnosis {
+  id        String @id @default(cuid())
+  sessionId String @unique
+
+  verdict DifferentialVerdict
+
+  /// What could not be established, in the engine's own words. Stored because
+  /// a diagnosis without its limits reads as more certain than it was.
+  limitations Json
+
+  createdAt DateTime @default(now())
+
+  session  ScanSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  findings DiagnosisFinding[]
+  causes   DiagnosisCause[]
+  tests    ConfirmationTestRun[]
+
+  @@map("diagnoses")
+}
+
+model DiagnosisFinding {
+  id          String @id @default(cuid())
+  diagnosisId String
+
+  /// The engine's stable id, e.g. "lean-condition".
+  findingId String          @db.VarChar(64)
+  title     String          @db.VarChar(160)
+  system    VehicleSystem   @default(UNKNOWN)
+  severity  FindingSeverity @default(INFO)
+
+  /// Observations for and against, each with its measured values.
+  supporting Json
+  opposing   Json
+
+  diagnosis Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosisId])
+  @@map("diagnosis_findings")
+}
+
+model DiagnosisCause {
+  id          String @id @default(cuid())
+  diagnosisId String
+
+  /// The catalogue id, e.g. "unmetered-air".
+  causeId   String        @db.VarChar(64)
+  label     String        @db.VarChar(160)
+  system    VehicleSystem @default(UNKNOWN)
+  mechanism String        @db.Text
+
+  status     CauseStatus
+  /// 0–100. A fit against the evidence, never a probability.
+  confidence Int
+  /// The raw sum behind the percentage, kept so it stays auditable.
+  pointsEarned    Int
+  pointsAvailable Int
+  keyObservationMade Boolean @default(false)
+
+  /// Every point with the observation that awarded it and the reason, and
+  /// every exclusion with what ruled the cause out.
+  contributions Json
+  exclusions    Json
+
+  diagnosis Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosisId])
+  @@index([causeId])
+  @@map("diagnosis_causes")
+}
+
+/// A confirmation test as performed, including the ones that settled nothing.
+model ConfirmationTestRun {
+  id          String @id @default(cuid())
+  diagnosisId String
+
+  testId  String      @db.VarChar(64)
+  outcome TestOutcome
+  /// What the performer actually measured, in their own words.
+  note    String?     @db.VarChar(500)
+
+  recordedAt DateTime @default(now())
+
+  diagnosis Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+
+  @@index([diagnosisId])
+  @@map("confirmation_test_runs")
+}
+
+/// Owner-entered maintenance. The one kind of history a user can supply
+/// directly, and the only history this build has that predates its own scans.
+model MaintenanceRecord {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  performedAt DateTime
+  title       String  @db.VarChar(120)
+  notes       String? @db.VarChar(1000)
+  /// As recorded by the owner. NULL means not known — never estimated.
+  odometerKm  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  events  VehicleEvent[]
+
+  @@index([vehicleId, performedAt])
+  @@map("maintenance_records")
+}
+
+/// An AI interaction, kept so an explanation can be traced to what produced it.
+///
+/// The context is stored alongside the output deliberately: "what was the
+/// model actually told?" has to be answerable after the fact, and it is the
+/// only way to re-run the grounding check on a past answer.
+model AiInteraction {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  kind  AiInteractionKind
+  model String            @db.VarChar(64)
+
+  context String @db.Text
+  /// The reply, or NULL when it was withheld.
+  output  String? @db.Text
+
+  /// False when the grounding check rejected it. A withheld answer is part of
+  /// the record: it says the model produced something and it was refused.
+  grounded   Boolean @default(true)
+  violations Json?
+
+  createdAt DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, createdAt])
+  @@map("ai_interactions")
+}
+
+// ---------------------------------------------------------------------------
+// The timeline spine (Stage 17 reads this)
+// ---------------------------------------------------------------------------
+
+enum VehicleEventKind {
+  SCAN_RECORDED
+  DTC_OBSERVED
+  FINDING_RAISED
+  DIAGNOSIS_REACHED
+  TEST_PERFORMED
+  MAINTENANCE_LOGGED
+}
+
+/// One dated thing that happened to a vehicle.
+///
+/// Denormalised on purpose. A timeline has to merge scans, findings, tests and
+/// maintenance in date order, and doing that across five tables at read time
+/// would be a union query that grows with every future stage. Events are
+/// written once, in the same transaction as the records they describe, so they
+/// cannot drift from them.
+model VehicleEvent {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  kind VehicleEventKind
+  /// When it actually happened, which is not always when it was recorded.
+  occurredAt DateTime
+
+  title  String  @db.VarChar(160)
+  detail String? @db.VarChar(1000)
+  /// NULL where severity does not apply, e.g. maintenance.
+  severity FindingSeverity?
+  system   VehicleSystem?
+
+  sessionId     String?
+  maintenanceId String?
+
+  createdAt DateTime @default(now())
+
+  vehicle     Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  session     ScanSession?       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  maintenance MaintenanceRecord? @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, occurredAt])
+  @@index([sessionId])
+  @@index([maintenanceId])
+  @@map("vehicle_events")
 }

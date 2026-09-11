@@ -38,6 +38,7 @@ export default async function LiveScanPage(props: PageProps<'/vehicles/[id]/live
 
       <LiveScanPanel
         vehicleName={name}
+        vehicleId={id}
         engineDisplacementCc={vehicle.configuration?.engineDisplacementCc ?? null}
       />
     </div>

@@ -23,6 +23,8 @@ export interface DiagnosisTabProps {
   isSimulated: boolean;
   engineDisplacementCc: number | null;
   vehicleName?: string | null;
+  /** Present once the vehicle is known, which is what saving needs. */
+  vehicleId: string;
 }
 
 export function DiagnosisTab({
@@ -32,6 +34,7 @@ export function DiagnosisTab({
   isSimulated,
   engineDisplacementCc,
   vehicleName = null,
+  vehicleId,
 }: DiagnosisTabProps) {
   const diagnosis = useDiagnosis({
     session: scanning ? null : session,
@@ -58,6 +61,8 @@ export function DiagnosisTab({
       results={diagnosis.results}
       isSimulated={isSimulated}
       vehicleName={vehicleName}
+      vehicleId={vehicleId}
+      session={session}
       onRecordResult={diagnosis.recordResult}
       onClearResult={diagnosis.clearResult}
       onClearAllResults={diagnosis.clearAllResults}
