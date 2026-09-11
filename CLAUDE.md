@@ -463,6 +463,46 @@ Findings come from the most recent scan; trends come from every scan. A finding
 describes one moment and stops being true when the next scan disagrees, whereas
 a direction across sessions only exists in the history.
 
+## Repair guides (Stage 18)
+
+`src/domain/repair` holds authored structured guides, the eligibility gate and
+the validator. Guides are **data, never generated**: an AI layer may explain
+one, it may not write one. "Do not allow generic AI-generated instructions to
+bypass safety checks" has no meaning if the instructions are produced at
+request time and validated against nothing.
+
+- **A guide is gated behind a confirmed cause.** Every stage before this
+  refused to name a component, and a guide names one. `assessGuideEligibility`
+  requires a SINGLE_LEADING verdict, the leader's defining observation actually
+  made, AND a confirmation test performed with an informative outcome. A scan
+  proposes a cause; a measurement confirms it. `UNABLE_TO_PERFORM` and `SKIP`
+  unlock nothing.
+- **Not eligible is explained, not hidden.** The panel says which condition is
+  missing and what would unlock it. A guide that silently disappears teaches
+  nothing about why.
+- **Safety cannot be bypassed structurally.** `safety`, `steps` and
+  `verification` are non-empty tuple types, so a guide missing one cannot be
+  constructed. The validator adds the relational rules: a step may not
+  reference a safety id that does not exist, every DANGER must be referenced by
+  at least one step, and a control saying "be careful" is rejected. It runs as
+  a test over the whole catalogue -- authored data, so a malformed guide is a
+  build-time mistake.
+- **A `SpecValue` either carries a value or the reason it is unknown**, never
+  both -- the same shape as `SensorReading`. Torque figures, part numbers and
+  labour times need authoritative service data this build has none of, so they
+  render the reason, never a plausible number or a blank.
+- **Every part is CONDITIONAL on a named step.** Which component failed is
+  settled by the inspection step, not by the diagnosis (Rule 9). Tests assert
+  no part is ever simply "required".
+- Every guide states that it is a generic procedure, not a vehicle-specific
+  one, and that is visible whether the procedure is expanded or not.
+
+Writing the validator caught a real gap: the misfire guide carried a DANGER
+hazard about pressurised fuel lines that no step referenced, because the
+procedure checked plug, coil and compression but never the injector -- which
+its own component line claimed to cover. The step was added; the hazard was
+not dropped.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

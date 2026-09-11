@@ -15,6 +15,8 @@ import {
 import type { DifferentialVerdict } from '@/domain/differential';
 import { describeDtcStructure, parseDtc } from '@/domain/telemetry';
 
+import { RepairGuidePanel } from '@/features/repair/RepairGuidePanel';
+
 import { CauseCard } from './CauseCard';
 import { SaveSessionPanel } from './SaveSessionPanel';
 import { ExplanationPanel } from './ExplanationPanel';
@@ -195,6 +197,14 @@ export function DiagnosticResult({
           onRecord={onRecordResult}
           onClear={onClearResult}
         />
+      </Section>
+
+      {/* --- How do I fix it? ----------------------------------------- */}
+      <Section
+        title="How do I fix it"
+        description="Available only once a cause has been confirmed by a performed test."
+      >
+        <RepairGuidePanel differential={differential} />
       </Section>
 
       {/* --- What should I do next? ----------------------------------- */}
