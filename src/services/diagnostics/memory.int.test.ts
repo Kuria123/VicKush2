@@ -10,6 +10,7 @@ import { differentiate } from '@/domain/differential';
 import { VehicleSimulator, type ScenarioId } from '@/domain/simulation';
 import { getParameter, type SensorReading } from '@/domain/telemetry';
 import { prisma } from '@/lib/db/client';
+import { getVehicleHealth } from '@/services/health/service';
 
 import { listMaintenance, listSessions, listTimeline, logMaintenance, parameterTrend } from './history';
 import { saveDiagnosticSession } from './persistence';
@@ -304,6 +305,53 @@ describe('reading the memory back', () => {
     expect(trend.length).toBe(3);
     expect(trend[0]!.at.getTime()).toBeLessThan(trend[2]!.at.getTime());
     expect(trend[0]!.mean).toBeGreaterThan(0);
+  });
+});
+
+describe('health over stored history', () => {
+  it('assesses nothing before a scan is saved', async () => {
+    const health = await getVehicleHealth(vehicleId, ownerId);
+
+    expect(health.overall).toBeNull();
+    expect(health.assessedCount).toBe(0);
+  });
+
+  it('scores the systems it has evidence for, and refuses the ones it does not', async () => {
+    await save('VACUUM_LEAK');
+    const health = await getVehicleHealth(vehicleId, ownerId);
+
+    const fuel = health.systems.find((s) => s.system === 'FUEL')!;
+    expect(fuel.status).toBe('ASSESSED');
+    expect(fuel.score).not.toBeNull();
+    // The score is exactly the sum of its stated reasons.
+    expect(fuel.score).toBe(
+      100 - fuel.reasons.reduce((sum, r) => sum + r.deduction, 0),
+    );
+
+    // Nothing recorded bears on braking, and a number here would be invented.
+    const braking = health.systems.find((s) => s.system === 'BRAKING')!;
+    expect(braking.status).toBe('NOT_ASSESSED');
+    expect(braking.score).toBeNull();
+  });
+
+  it('carries the finding through as the reason for the deduction', async () => {
+    await save('VACUUM_LEAK');
+    const health = await getVehicleHealth(vehicleId, ownerId);
+
+    const fuel = health.systems.find((s) => s.system === 'FUEL')!;
+    const finding = fuel.reasons.find((r) => r.kind === 'FINDING');
+
+    expect(finding?.summary).toMatch(/lean condition/i);
+    expect(finding?.detail).toMatch(/fuel trim/i);
+    expect(finding?.deduction).toBeGreaterThan(0);
+  });
+
+  it('shows another owner nothing', async () => {
+    await save('VACUUM_LEAK');
+    const health = await getVehicleHealth(vehicleId, otherOwnerId);
+
+    expect(health.overall).toBeNull();
+    expect(health.assessedCount).toBe(0);
   });
 });
 

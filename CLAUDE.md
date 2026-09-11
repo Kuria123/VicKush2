@@ -430,6 +430,39 @@ grouping is what makes it read as a history rather than a log.
 - **Owner-entered maintenance is the only history predating the app's own
   scans**, and the reason a timeline can span months. An unknown odometer stays
   NULL and is never estimated.
+## Vehicle health engine (Stage 16)
+
+`src/domain/health` scores each system from stored evidence;
+`src/services/health` gathers what it needs. Scoring is pure and lives in the
+domain, so the model is testable without a database and the database cannot
+quietly change what a score means.
+
+- **A score IS its reasons.** It is 100 minus the stated deductions, each
+  carrying the evidence that caused it. There is no separate judgement that the
+  reasons then justify -- remove them and no score remains. A test asserts the
+  arithmetic holds.
+- **A perfect score is explained too**, or it becomes the one number on screen
+  with nothing behind it. It also does not overclaim: normal readings are
+  stated as normal readings, never as a clean bill of health.
+- **Braking and suspension are NEVER scored.** Mode 01 carries no brake or
+  chassis data and no ABS module is read, so any number would be invented --
+  and a braking figure nobody measured is the most dangerous thing this product
+  could show. Both return NOT_ASSESSED with the reason, and are rendered as
+  prominently as a scored system: quietly omitting them would read as systems
+  with nothing wrong.
+- **Unassessed systems are excluded from the overall figure.** Counting them as
+  0 or 100 would let something nobody measured move the headline number.
+- **NOT_ASSESSED is not health.** A system whose parameters were never captured
+  says so, rather than defaulting to 100.
+- **A trend is a direction, never a prediction.** `detectTrend` requires three
+  points, a minimum delta and 75% step consistency -- 0.6 let a pure zigzag
+  through as a decline. Only adverse directions deduct: voltage climbing is not
+  a fault. The series itself is shown so the claim can be checked.
+
+Findings come from the most recent scan; trends come from every scan. A finding
+describes one moment and stops being true when the next scan disagrees, whereas
+a direction across sessions only exists in the history.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
