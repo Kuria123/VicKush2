@@ -21,6 +21,7 @@ import { CauseCard } from './CauseCard';
 import { SaveSessionPanel } from './SaveSessionPanel';
 import { ExplanationPanel } from './ExplanationPanel';
 import { MechanicPanel } from './MechanicPanel';
+import { SecondOpinionPanel } from './SecondOpinionPanel';
 import { TestPanel } from './TestPanel';
 
 /**
@@ -266,6 +267,8 @@ export function DiagnosticResult({
         vehicleName={vehicleName}
         isSimulated={isSimulated}
       />
+
+      <SecondOpinionPanel analysis={analysis} differential={differential} />
 
       <MechanicPanel
         analysis={analysis}

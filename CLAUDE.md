@@ -602,6 +602,38 @@ The brief states the requirement as a contrast, and everything follows from it:
 The measurement is the Stage 16 `detectTrend`, reused rather than
 reimplemented. What this stage adds is interpretation and wording.
 
+## Second opinion (Stage 22)
+
+`src/domain/second-opinion` assesses a recommendation someone else has made
+against what the scan actually found. The sentence the feature exists to be
+able to produce is "Insufficient evidence to confirm this component has
+failed", and three decisions protect it.
+
+- **The assessment is deterministic, not generated.** It is computed from the
+  same ranked causes the differential produced. Asking a model whether a
+  mechanic is right would replace one unverifiable opinion with another, which
+  is the opposite of the point. An AI layer may explain this output; it does
+  not produce it (Rule 8).
+- **Absence of evidence is never evidence of absence.** `NOT_SUPPORTED` needs
+  positive contrary evidence -- the mechanism ruled out, or the scan pointing
+  clearly elsewhere. Everything short of that is `INSUFFICIENT_EVIDENCE`, and
+  those read as different answers because they are.
+- **Brakes and suspension can never be contradicted.** Their catalogue entries
+  carry `assessable: false`, which makes `NOT_SUPPORTED` unreachable for them.
+  The entries exist so the engine says "insufficient evidence" rather than
+  falling silent, which a reader would take as disagreement.
+- **The mechanic knows things this build does not**, and every output says so.
+  They have had the vehicle on a ramp, heard it and driven it. This is a second
+  opinion on what the data supports, never a judgement of the person -- tests
+  assert no output accuses anyone, comments on price, or suggests going to
+  another garage instead of taking a measurement.
+- **An unrecognised recommendation is declined, not guessed at.** A confident
+  answer about a component the user did not ask about is the most damaging
+  output this feature could produce.
+
+Even full agreement stops short of confirming a part has failed: a scan ranks
+mechanisms, and identifying a failed component needs inspection.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

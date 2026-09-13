@@ -244,3 +244,44 @@ test('limits of the diagnosis are always stated', async ({ page }) => {
   // `.first()`: the fault code section repeats the point in its own words.
   await expect(page.getByText(/not interpreted/i).first()).toBeVisible();
 });
+
+test('the second opinion says insufficient evidence about brakes', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await openScan(page);
+  await scanScenario(page, 'VACUUM_LEAK');
+  await openDiagnosis(page);
+
+  await page.getByLabel('What were you told needs doing?').fill('Replace the front brake pads');
+  await page.getByRole('button', { name: 'Assess' }).click();
+
+  // Nothing this build reads bears on brakes, so it can never contradict the
+  // recommendation — and silence would read as doubt.
+  await expect(page.getByText('Not enough evidence either way')).toBeVisible();
+  await expect(page.getByText(/nothing this build reads bears on/i)).toBeVisible();
+  await expect(page.getByText(/this is not disagreement/i)).toBeVisible();
+
+  // And it never judges the person.
+  await expect(page.getByText(/information this build does not/i).first()).toBeVisible();
+});
+
+test('the second opinion disagrees without calling anyone wrong', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await openScan(page);
+  await scanScenario(page, 'VACUUM_LEAK');
+  await openDiagnosis(page);
+
+  // The scan points at unmetered air, not at the sensor.
+  await page
+    .getByLabel('What were you told needs doing?')
+    .fill('Replace the mass airflow sensor');
+  await page.getByRole('button', { name: 'Assess' }).click();
+
+  await expect(page.getByText('The scan points elsewhere')).toBeVisible();
+  await expect(page.getByText(/more than one fault/i)).toBeVisible();
+  await expect(page.getByText(/ask what was observed/i)).toBeVisible();
+
+  // No accusation anywhere on the page.
+  await expect(page.locator('main')).not.toContainText(/scam|rip.?off|dishonest|overcharg/i);
+});
