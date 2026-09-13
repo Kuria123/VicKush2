@@ -199,6 +199,7 @@ model Vehicle {
   events         VehicleEvent[]
   maintenance    MaintenanceRecord[]
   aiInteractions AiInteraction[]
+  repairs        RepairEvent[]
 
   /// Scoped to the owner rather than globally: the same physical vehicle can
   /// legitimately be registered by a new owner after a sale. MySQL permits
@@ -255,8 +256,8 @@ model VehicleConfiguration {
   transmissionGears Int?              @db.TinyInt
   driveType         DriveType?
 
-  ecuName     String?      @db.VarChar(64)
-  obdProtocol ObdProtocol?
+  ecuName      String?      @db.VarChar(64)
+  obdProtocol  ObdProtocol?
   /// NULL means we have not established whether the vehicle speaks OBD-II.
   supportsObd2 Boolean?
 
@@ -274,10 +275,10 @@ model VehicleModule {
   id        String @id @default(cuid())
   vehicleId String
 
-  name   String       @db.VarChar(64)
-  system ModuleSystem @default(OTHER)
+  name    String       @db.VarChar(64)
+  system  ModuleSystem @default(OTHER)
   /// ECU address exactly as reported, e.g. "7E0".
-  address String?     @db.VarChar(8)
+  address String?      @db.VarChar(8)
 
   protocol ObdProtocol?
   status   ModuleStatus @default(UNKNOWN)
@@ -394,11 +395,13 @@ model ScanSession {
 
   createdAt DateTime @default(now())
 
-  vehicle    Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  dtcs       SessionDtc[]
-  parameters ParameterStat[]
-  diagnosis  Diagnosis?
-  events     VehicleEvent[]
+  vehicle       Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  dtcs          SessionDtc[]
+  parameters    ParameterStat[]
+  diagnosis     Diagnosis?
+  events        VehicleEvent[]
+  repairsBefore RepairEvent[]   @relation("BeforeScan")
+  repairsAfter  RepairEvent[]   @relation("AfterScan")
 
   @@index([vehicleId, startedAt])
   @@map("scan_sessions")
@@ -410,10 +413,10 @@ model SessionDtc {
   id        String @id @default(cuid())
   sessionId String
 
-  code   String    @db.VarChar(8)
-  status DtcStatus @default(STORED)
+  code          String    @db.VarChar(8)
+  status        DtcStatus @default(STORED)
   /// The module that reported it, exactly as given.
-  moduleAddress String? @db.VarChar(8)
+  moduleAddress String?   @db.VarChar(8)
 
   firstSeenAt DateTime
 
@@ -463,7 +466,7 @@ model Diagnosis {
 
   createdAt DateTime @default(now())
 
-  session  ScanSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session  ScanSession           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   findings DiagnosisFinding[]
   causes   DiagnosisCause[]
   tests    ConfirmationTestRun[]
@@ -501,13 +504,13 @@ model DiagnosisCause {
   system    VehicleSystem @default(UNKNOWN)
   mechanism String        @db.Text
 
-  status     CauseStatus
+  status             CauseStatus
   /// 0–100. A fit against the evidence, never a probability.
-  confidence Int
+  confidence         Int
   /// The raw sum behind the percentage, kept so it stays auditable.
-  pointsEarned    Int
-  pointsAvailable Int
-  keyObservationMade Boolean @default(false)
+  pointsEarned       Int
+  pointsAvailable    Int
+  keyObservationMade Boolean     @default(false)
 
   /// Every point with the observation that awarded it and the reason, and
   /// every exclusion with what ruled the cause out.
@@ -546,8 +549,8 @@ model MaintenanceRecord {
   vehicleId String
 
   performedAt DateTime
-  title       String  @db.VarChar(120)
-  notes       String? @db.VarChar(1000)
+  title       String   @db.VarChar(120)
+  notes       String?  @db.VarChar(1000)
   /// As recorded by the owner. NULL means not known — never estimated.
   odometerKm  Int?
 
@@ -573,7 +576,7 @@ model AiInteraction {
   kind  AiInteractionKind
   model String            @db.VarChar(64)
 
-  context String @db.Text
+  context String  @db.Text
   /// The reply, or NULL when it was withheld.
   output  String? @db.Text
 
@@ -590,6 +593,52 @@ model AiInteraction {
   @@map("ai_interactions")
 }
 
+/// A repair, and the two scans that bracket it.
+///
+/// The before scan is required: a repair with nothing recorded beforehand
+/// cannot be verified against anything, and storing one would put an
+/// unverifiable claim on the timeline. The after scan arrives later, which is
+/// why it is nullable.
+///
+/// `summary` is what the owner says was done. This build does not verify it,
+/// and the verification output says so.
+model RepairEvent {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  performedAt DateTime
+  summary     String   @db.VarChar(160)
+  notes       String?  @db.VarChar(1000)
+
+  /// The guide followed and the cause it addressed, when a guide was used.
+  guideId String? @db.VarChar(64)
+  causeId String? @db.VarChar(64)
+
+  beforeSessionId String
+  afterSessionId  String?
+
+  /// The conclusion reached, stored as it was reached. Null until an after
+  /// scan exists. Never recomputed on read, for the same reason a diagnosis
+  /// is not: the thresholds it was judged against may change.
+  verdict    VerificationVerdict?
+  verifiedAt DateTime?
+  /// The full comparison, so the conclusion can be walked back to its numbers.
+  comparison Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle       Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  beforeSession ScanSession    @relation("BeforeScan", fields: [beforeSessionId], references: [id], onDelete: Cascade)
+  afterSession  ScanSession?   @relation("AfterScan", fields: [afterSessionId], references: [id], onDelete: SetNull)
+  events        VehicleEvent[]
+
+  @@index([vehicleId, performedAt])
+  @@index([beforeSessionId])
+  @@index([afterSessionId])
+  @@map("repair_events")
+}
+
 // ---------------------------------------------------------------------------
 // The timeline spine (Stage 17 reads this)
 // ---------------------------------------------------------------------------
@@ -601,6 +650,15 @@ enum VehicleEventKind {
   DIAGNOSIS_REACHED
   TEST_PERFORMED
   MAINTENANCE_LOGGED
+  REPAIR_RECORDED
+  VERIFICATION_COMPLETED
+}
+
+enum VerificationVerdict {
+  CONSISTENT_WITH_REPAIR
+  NOT_DEMONSTRATED
+  WORSENED
+  INCONCLUSIVE
 }
 
 /// One dated thing that happened to a vehicle.
@@ -614,27 +672,30 @@ model VehicleEvent {
   id        String @id @default(cuid())
   vehicleId String
 
-  kind VehicleEventKind
+  kind       VehicleEventKind
   /// When it actually happened, which is not always when it was recorded.
   occurredAt DateTime
 
-  title  String  @db.VarChar(160)
-  detail String? @db.VarChar(1000)
+  title    String           @db.VarChar(160)
+  detail   String?          @db.VarChar(1000)
   /// NULL where severity does not apply, e.g. maintenance.
   severity FindingSeverity?
   system   VehicleSystem?
 
   sessionId     String?
   maintenanceId String?
+  repairId      String?
 
   createdAt DateTime @default(now())
 
   vehicle     Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   session     ScanSession?       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   maintenance MaintenanceRecord? @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  repair      RepairEvent?       @relation(fields: [repairId], references: [id], onDelete: Cascade)
 
   @@index([vehicleId, occurredAt])
   @@index([sessionId])
   @@index([maintenanceId])
+  @@index([repairId])
   @@map("vehicle_events")
 }

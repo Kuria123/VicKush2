@@ -25,6 +25,8 @@ const KIND_LABEL: Record<TimelineEntry['kind'], string> = {
   DIAGNOSIS_REACHED: 'Diagnosis',
   TEST_PERFORMED: 'Test',
   MAINTENANCE_LOGGED: 'Maintenance',
+  REPAIR_RECORDED: 'Repair',
+  VERIFICATION_COMPLETED: 'Verification',
 };
 
 /** Marks are graphic, so they use the vivid `-mark` steps, not the text steps. */
@@ -35,6 +37,8 @@ const MARK: Record<TimelineEntry['kind'], string> = {
   DIAGNOSIS_REACHED: 'bg-accent',
   TEST_PERFORMED: 'bg-accent',
   MAINTENANCE_LOGGED: 'bg-status-ok-mark',
+  REPAIR_RECORDED: 'bg-status-ok-mark',
+  VERIFICATION_COMPLETED: 'bg-accent',
 };
 
 const SEVERITY_TONE = {

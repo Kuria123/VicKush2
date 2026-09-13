@@ -15,7 +15,9 @@ export interface TimelineEntry {
     | 'FINDING_RAISED'
     | 'DIAGNOSIS_REACHED'
     | 'TEST_PERFORMED'
-    | 'MAINTENANCE_LOGGED';
+    | 'MAINTENANCE_LOGGED'
+    | 'REPAIR_RECORDED'
+    | 'VERIFICATION_COMPLETED';
   occurredAt: Date;
   title: string;
   detail: string | null;

@@ -4,9 +4,11 @@ import { notFound } from 'next/navigation';
 
 import { Badge, Card } from '@/components/ui';
 import { MaintenanceForm } from '@/features/history/MaintenanceForm';
+import { RepairPanel } from '@/features/history/RepairPanel';
 import { Timeline } from '@/features/history/Timeline';
 import { currentUserId } from '@/lib/auth';
 import { listSessions, listTimeline } from '@/services/diagnostics/history';
+import { listRepairs } from '@/services/diagnostics/verification';
 import { getVehicleForOwner } from '@/services/vehicle/queries';
 
 export const metadata: Metadata = { title: 'Vehicle history' };
@@ -28,9 +30,10 @@ export default async function HistoryPage(props: PageProps<'/vehicles/[id]/histo
   const vehicle = await getVehicleForOwner(id, userId);
   if (!vehicle) notFound();
 
-  const [entries, sessions] = await Promise.all([
+  const [entries, sessions, repairs] = await Promise.all([
     listTimeline(id, userId),
     listSessions(id, userId),
+    listRepairs(id, userId),
   ]);
 
   const simulated = sessions.filter((session) => session.isSimulated).length;
@@ -92,6 +95,11 @@ export default async function HistoryPage(props: PageProps<'/vehicles/[id]/histo
       <div className="mb-10">
         <Timeline entries={entries} />
       </div>
+
+      <section className="mb-10">
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Repairs and verification</h2>
+        <RepairPanel vehicleId={id} repairs={repairs} sessions={sessions} />
+      </section>
 
       <MaintenanceForm vehicleId={id} />
     </div>

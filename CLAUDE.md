@@ -503,6 +503,44 @@ procedure checked plug, coil and compression but never the injector -- which
 its own component line claimed to cover. The step was added; the hazard was
 not dropped.
 
+## Repair verification (Stage 19)
+
+`src/domain/verification` compares a before scan with an after scan;
+`src/services/diagnostics/verification.ts` stores the repair and the
+conclusion. The brief asks for a *cautious* conclusion, and that word is the
+design.
+
+- **There is no FIXED verdict.** The strongest available is
+  `CONSISTENT_WITH_REPAIR`, and its own summary says it is not proof the fault
+  will not return. Nothing in a scan can establish that.
+- **Like is compared with like.** A parameter is only compared within the same
+  operating condition. Where the after-scan did not revisit a condition, that
+  pair is absent rather than substituted, and if no condition is shared the
+  verdict is `INCONCLUSIVE` however good the numbers look.
+- **A cleared code proves nothing.** Codes clear on command and take a drive
+  cycle to return. Their absence is reported and explicitly excluded from
+  driving a positive verdict; the caveat says so.
+- **Only parameters with a defensible direction are judged.** Engine speed
+  changes between scans for reasons unrelated to a repair, so including it
+  would let noise decide a verdict.
+- **Caveats are always attached and never collapsed**, longest on a positive
+  verdict -- the conclusion most likely to be acted on is the one that most
+  needs its limits visible.
+- **The before scan is chosen when the repair is recorded.** A repair with
+  nothing captured beforehand cannot be verified against anything, and the form
+  refuses rather than accepting one that can never be checked. Comparing a scan
+  with itself is refused for the same reason.
+- The verdict is stored as it was reached and never recomputed on read, like a
+  diagnosis: the thresholds may change, and a stored verdict must keep saying
+  what the owner was told.
+
+An integration test against the real simulator caught a genuine bug: the
+diagnostic engine expresses "nothing was wrong" as an INFO finding, so a scan
+after a *successful* repair raised a finding the before-scan lacked. Counted as
+new, that made a perfect result read as `WORSENED` -- every trim improved, the
+lean condition resolved, verdict worse. INFO findings are the absence of a
+condition expressed as a finding, so they now take no part in the comparison.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

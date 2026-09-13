@@ -14,6 +14,7 @@ import { getVehicleHealth } from '@/services/health/service';
 
 import { listMaintenance, listSessions, listTimeline, logMaintenance, parameterTrend } from './history';
 import { saveDiagnosticSession } from './persistence';
+import { listRepairs, recordRepair, verifyRepairAgainstScan } from './verification';
 
 /**
  * Vehicle memory, against the real database.
@@ -352,6 +353,158 @@ describe('health over stored history', () => {
 
     expect(health.overall).toBeNull();
     expect(health.assessedCount).toBe(0);
+  });
+});
+
+describe('repair verification', () => {
+  it('records a repair against the scan taken before it', async () => {
+    const before = await save('VACUUM_LEAK');
+    if (!before.ok) throw new Error('save failed');
+
+    const result = await recordRepair({
+      vehicleId,
+      ownerId,
+      beforeSessionId: before.sessionId,
+      performedAt: new Date(),
+      summary: 'Intake hose replaced',
+    });
+
+    expect(result.ok).toBe(true);
+
+    const entry = (await listTimeline(vehicleId, ownerId)).find(
+      (e) => e.kind === 'REPAIR_RECORDED',
+    );
+    expect(entry?.title).toBe('Intake hose replaced');
+    // Taken at the owner's word, and the timeline says so.
+    expect(entry?.detail).toMatch(/does not verify it/i);
+  });
+
+  it('refuses a before-scan that belongs to another vehicle', async () => {
+    const other = await prisma.vehicle.create({
+      data: { ownerId, make: 'Other', model: 'Car', year: 2010 },
+      select: { id: true },
+    });
+    const before = await save('VACUUM_LEAK');
+    if (!before.ok) throw new Error('save failed');
+
+    const result = await recordRepair({
+      vehicleId: other.id,
+      ownerId,
+      beforeSessionId: before.sessionId,
+      performedAt: new Date(),
+      summary: 'Should not be written',
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('BEFORE_SCAN_NOT_FOUND');
+  });
+
+  it('verifies a repair by comparing two real scans, and stores the conclusion', async () => {
+    const before = await save('VACUUM_LEAK', new Date(Date.now() - 7_200_000));
+    if (!before.ok) throw new Error('save failed');
+
+    const repair = await recordRepair({
+      vehicleId,
+      ownerId,
+      beforeSessionId: before.sessionId,
+      performedAt: new Date(Date.now() - 3_600_000),
+      summary: 'Intake hose replaced',
+      causeId: 'unmetered-air',
+    });
+    if (!repair.ok) throw new Error('repair failed');
+
+    // A healthy scan after the work: the leak is gone from the model.
+    const after = await save('NORMAL');
+    if (!after.ok) throw new Error('save failed');
+
+    const verified = await verifyRepairAgainstScan({
+      repairId: repair.repairId,
+      vehicleId,
+      ownerId,
+      afterSessionId: after.sessionId,
+    });
+
+    expect(verified.ok).toBe(true);
+    if (!verified.ok) return;
+
+    // The strongest verdict available. There is deliberately no FIXED.
+    expect(verified.verification.verdict).toBe('CONSISTENT_WITH_REPAIR');
+    expect(verified.verification.summary).toMatch(/not proof/i);
+
+    const stored = await listRepairs(vehicleId, ownerId);
+    expect(stored[0]?.verdict).toBe('CONSISTENT_WITH_REPAIR');
+    expect(stored[0]?.afterSessionId).toBe(after.sessionId);
+    // The full comparison is kept, so the conclusion walks back to its numbers.
+    expect(JSON.stringify(stored[0]?.comparison)).toMatch(/fuel trim/i);
+  });
+
+  it('puts the verification on the timeline', async () => {
+    const before = await save('VACUUM_LEAK', new Date(Date.now() - 7_200_000));
+    if (!before.ok) throw new Error('save failed');
+
+    const repair = await recordRepair({
+      vehicleId,
+      ownerId,
+      beforeSessionId: before.sessionId,
+      performedAt: new Date(Date.now() - 3_600_000),
+      summary: 'Intake hose replaced',
+    });
+    if (!repair.ok) throw new Error('repair failed');
+
+    const after = await save('NORMAL');
+    if (!after.ok) throw new Error('save failed');
+
+    await verifyRepairAgainstScan({
+      repairId: repair.repairId,
+      vehicleId,
+      ownerId,
+      afterSessionId: after.sessionId,
+    });
+
+    const entry = (await listTimeline(vehicleId, ownerId)).find(
+      (e) => e.kind === 'VERIFICATION_COMPLETED',
+    );
+    expect(entry?.title).toMatch(/consistent with the repair/i);
+  });
+
+  it('refuses to compare a scan with itself', async () => {
+    const before = await save('VACUUM_LEAK');
+    if (!before.ok) throw new Error('save failed');
+
+    const repair = await recordRepair({
+      vehicleId,
+      ownerId,
+      beforeSessionId: before.sessionId,
+      performedAt: new Date(),
+      summary: 'Nothing really',
+    });
+    if (!repair.ok) throw new Error('repair failed');
+
+    // Comparing a scan with itself would produce a flawless result from nothing.
+    const verified = await verifyRepairAgainstScan({
+      repairId: repair.repairId,
+      vehicleId,
+      ownerId,
+      afterSessionId: before.sessionId,
+    });
+
+    expect(verified.ok).toBe(false);
+    if (!verified.ok) expect(verified.reason).toBe('SAME_SCAN');
+  });
+
+  it('shows another owner no repairs', async () => {
+    const before = await save('VACUUM_LEAK');
+    if (!before.ok) throw new Error('save failed');
+
+    await recordRepair({
+      vehicleId,
+      ownerId,
+      beforeSessionId: before.sessionId,
+      performedAt: new Date(),
+      summary: 'Intake hose replaced',
+    });
+
+    expect(await listRepairs(vehicleId, otherOwnerId)).toHaveLength(0);
   });
 });
 
