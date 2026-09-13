@@ -15,6 +15,8 @@ import {
   type SpecValue,
 } from '@/domain/repair';
 
+import { ScenePlan } from './ScenePlan';
+
 /**
  * The repair guide.
  *
@@ -176,6 +178,8 @@ function Guide({ guide, confirmation }: { guide: RepairGuide; confirmation: stri
               ))}
             </ol>
           </Section>
+
+          <ScenePlan guide={guide} />
 
           <Card surface="sunken">
             <p className="label-technical">What this guide cannot tell you</p>

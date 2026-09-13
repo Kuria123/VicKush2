@@ -119,3 +119,26 @@ test('the guide states what it does not know rather than inventing it', async ({
   // And it never claims to be vehicle-specific.
   await expect(page.getByText(/generic procedure/i).first()).toBeVisible();
 });
+
+test('a video is not offered, and the scene plan says why', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  await openScan(page);
+  await diagnoseLeak(page);
+  await page.getByRole('button', { name: 'Pass', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Show procedure' }).click();
+
+  // No rendering backend exists, and the panel says so rather than offering a
+  // button that cannot work or substituting stock footage.
+  await expect(page.getByText(/No video provider is configured/i)).toBeVisible();
+  await expect(page.getByText(/complete without one/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: /generate video/i })).toHaveCount(0);
+
+  // The plan a video would be rendered from is still shown.
+  await page.getByRole('button', { name: 'Show scene plan' }).click();
+  await expect(page.getByText(/no part of it is written by a model/i)).toBeVisible();
+
+  // Safety scenes are marked unskippable in the plan itself.
+  await expect(page.getByText('Cannot be skipped').first()).toBeVisible();
+  await expect(page.getByText('DANGER').first()).toBeVisible();
+});

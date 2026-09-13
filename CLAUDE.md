@@ -541,6 +541,38 @@ new, that made a perfect result read as `WORSENED` -- every trim improved, the
 lean condition resolved, verdict worse. INFO findings are the absence of a
 condition expressed as a finding, so they now take no part in the comparison.
 
+## Repair video architecture (Stage 20)
+
+`src/domain/video` holds the pipeline; `src/services/video` the provider seam.
+Architecture only -- no rendering backend is configured, and the product says
+so rather than substituting anything.
+
+- **Video is not a dependency of the diagnostic system.** The arrow points one
+  way: video imports from `domain/repair`, and nothing in diagnostics,
+  differential, confirmation, repair, simulation or telemetry imports video. A
+  test walks the source of those six and asserts it. If rendering is absent or
+  broken, every diagnosis still works -- that is the difference between a
+  feature and a dependency.
+- **A script is derived, never generated.** `buildScript` is deterministic and
+  total: every sentence comes from the authored guide, and there is no point in
+  the pipeline at which a model could invent a step.
+- **Every scene carries a `source` that must resolve.** `validateScript` checks
+  a script against the *authored guide*, not against the script's own claims --
+  a tampered script cannot exonerate itself by also editing its refs. That
+  makes "the model added a step" a detectable condition rather than a hope.
+- **A provider may rephrase; it may not change substance.** The validator
+  accepts a genuine paraphrase of a safety control and rejects one that drops
+  it, by checking the specific vocabulary rather than an exact string.
+- **Safety scenes are one per hazard, ordered before any procedure scene, and
+  flagged `mandatory`.** A single card listing four hazards reads as a
+  formality; skipping to the useful bit is skipping the hazard.
+- **No footage is implied to be the viewer's own vehicle.** Every visual brief
+  says so, because a viewer following a different vehicle's layout is being
+  actively misled about where components are.
+
+Set `VIDEO_PROVIDER` to a registered id to enable one. Unknown ids fall back to
+unconfigured rather than throwing at runtime.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
