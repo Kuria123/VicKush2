@@ -301,7 +301,11 @@ describe('other systems', () => {
     expect(findingIds(analyse('RICH_MIXTURE'))).toContain('rich-condition');
   });
 
-  it('treats overheating as severe', () => {
+  // Integrating a long thermal scenario is heavy enough to exceed the 5 s
+  // default. Stated per-test rather than raising the global default, which
+  // would let a real hang elsewhere sit undetected for a minute. Same reason
+  // as the two budgets in VehicleSimulator.test.ts.
+  it('treats overheating as severe', { timeout: 30_000 }, () => {
     const analysis = analyse('OVERHEATING', [{ throttle: 0, seconds: 1400 }]);
     const overheating = analysis.findings.find((f) => f.id === 'overheating');
     expect(overheating).toBeDefined();

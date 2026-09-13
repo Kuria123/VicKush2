@@ -634,6 +634,40 @@ failed", and three decisions protect it.
 Even full agreement stops short of confirming a part has failed: a scan ranks
 mechanisms, and identifying a failed component needs inspection.
 
+## Cost intelligence (Stage 23)
+
+`src/domain/cost` holds the model and the comparison; `src/services/cost` the
+provider seam and quote storage. The brief asks for the data model and service
+architecture, and sets the constraint that decides their shape: **never
+fabricate live market prices.**
+
+- **This build cannot price anything**, and every output says so first. No
+  parts catalogue, no labour rates, no market feed. The tempting alternative --
+  a few hundred rows of "typical" figures -- would be wrong for most vehicles
+  in most markets, and someone would take a number from it into a negotiation.
+- **A `Quote` is real; an `Estimate` may not be.** A quote always carries a
+  figure because someone was actually told it. An `Estimate` is a union that
+  either carries a figure *with its source and the date it was valid*, or
+  carries the reason it is unknown -- never both, and never a figure with no
+  provenance.
+- **Money is integer minor units.** Floating point is wrong for money, and a
+  fractional minor unit throws rather than rounding: it means float arithmetic
+  happened upstream, and rounding would hide the bug. The currency is always
+  displayed, because "1,200" meaning two different amounts is a mistake worth
+  designing out.
+- **Quotes are compared, never judged.** Every statement is a fact about the
+  numbers -- which is highest, how far apart, what multiple. A verdict needs a
+  reference price and there is none. Tests assert no output ever says
+  expensive, too much, fair, reasonable or good value.
+- **Different currencies are not compared.** Converting needs an exchange rate
+  this build does not have, applied on a date it does not know -- a real error
+  dressed as a convenience.
+- **Whether two quotes cover the same work is unknowable here**, and the
+  comparison says so: a lower quote may simply exclude part of the job.
+
+Set `COST_PROVIDER` to a registered id to add a pricing source. Unknown ids
+fall back to unconfigured rather than throwing.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

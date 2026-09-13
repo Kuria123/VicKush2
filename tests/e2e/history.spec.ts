@@ -145,3 +145,64 @@ test('a saved diagnosis survives a reload', async ({ page }) => {
   const codes = page.getByText(/What the code means is not interpreted/i);
   if ((await codes.count()) > 0) await expect(codes.first()).toBeVisible();
 });
+
+test('no price is offered before any quote is entered', async ({ page }) => {
+  test.setTimeout(120_000);
+
+  const id = await signUpWithVehicle(page);
+  await page.goto(`/vehicles/${id}/history`);
+
+  await expect(page.getByRole('heading', { name: 'Quotes' })).toBeVisible();
+  // The brief's constraint: never fabricate live market prices.
+  await expect(page.getByText(/cannot say what the work should cost/i)).toBeVisible();
+  await expect(page.getByText(/no parts catalogue, no labour rates/i)).toBeVisible();
+
+  // Nothing that looks like an estimate is anywhere on the page.
+  await expect(page.getByText(/typical(ly)? costs?|you should expect to pay|estimated cost/i)).toHaveCount(0);
+});
+
+test('two quotes are compared as figures, never judged', async ({ page }) => {
+  test.setTimeout(180_000);
+
+  const id = await signUpWithVehicle(page);
+  await page.goto(`/vehicles/${id}/history`);
+
+  const form = page
+    .locator('form')
+    .filter({ has: page.getByRole('button', { name: 'Record quote' }) });
+
+  await form.getByLabel('Who quoted it').fill('Garage A');
+  await form.getByLabel('What it covers').fill('Replace intake hose');
+  await form.getByLabel('Amount').fill('8000');
+  await form.getByLabel('When').fill(today());
+  await page.getByRole('button', { name: 'Record quote' }).click();
+  await expect(page.getByText('Quote recorded.')).toBeVisible({ timeout: 20_000 });
+
+  // A single quote has nothing to compare against, and says so.
+  await expect(page.getByText(/nothing to be compared against/i)).toBeVisible();
+
+  const second = page
+    .locator('form')
+    .filter({ has: page.getByRole('button', { name: 'Record quote' }) });
+  await second.getByLabel('Who quoted it').fill('Garage B');
+  await second.getByLabel('What it covers').fill('Replace intake hose');
+  await second.getByLabel('Amount').fill('14000');
+  await second.getByLabel('When').fill(today());
+  await page.getByRole('button', { name: 'Record quote' }).click();
+  await expect(page.getByText('Quote recorded.')).toBeVisible({ timeout: 20_000 });
+
+  await page.reload();
+
+  // Facts about the numbers.
+  await expect(page.getByText(/2 quotes recorded/i)).toBeVisible();
+  await expect(page.getByText(/spread between them/i)).toBeVisible();
+
+  // Never a verdict on either figure.
+  await expect(page.locator('main')).not.toContainText(
+    /too much|overpriced|expensive|good value|you should pay/i,
+  );
+});
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}

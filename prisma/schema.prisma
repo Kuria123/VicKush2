@@ -200,6 +200,7 @@ model Vehicle {
   maintenance    MaintenanceRecord[]
   aiInteractions AiInteraction[]
   repairs        RepairEvent[]
+  quotes         RepairQuote[]
 
   /// Scoped to the owner rather than globally: the same physical vehicle can
   /// legitimately be registered by a new owner after a sale. MySQL permits
@@ -637,6 +638,54 @@ model RepairEvent {
   @@index([beforeSessionId])
   @@index([afterSessionId])
   @@map("repair_events")
+}
+
+enum QuoteSource {
+  MECHANIC
+  OWNER
+  SUPPLIER
+}
+
+/// A figure the owner was actually given.
+///
+/// Distinct from an estimate: this build cannot produce an estimate, because
+/// it has no parts catalogue, labour rates or market data. What it can do is
+/// record what someone was quoted, which is real data supplied by the person
+/// it concerns.
+///
+/// Money is stored as integer minor units. Floating point is wrong for money,
+/// and a rounding error in a repair quote is the kind of bug that survives to
+/// production because it looks like someone else's mistake.
+model RepairQuote {
+  id        String @id @default(cuid())
+  vehicleId String
+
+  source      QuoteSource
+  /// Who gave it. This build does not verify the business exists.
+  providedBy  String      @db.VarChar(120)
+  /// What the quote covers, in their words. Required: two quotes are only
+  /// comparable if it is clear what each covers, and that is the user's call.
+  description String      @db.VarChar(300)
+
+  /// Integer minor units, e.g. cents. Never a float.
+  totalMinor Int
+  /// ISO 4217. Never assumed.
+  currency   String @db.VarChar(3)
+
+  /// Only when the quote itself gave a split. Never inferred.
+  partsMinor  Int?
+  labourMinor Int?
+
+  receivedAt DateTime
+  notes      String?  @db.VarChar(1000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, receivedAt])
+  @@map("repair_quotes")
 }
 
 // ---------------------------------------------------------------------------

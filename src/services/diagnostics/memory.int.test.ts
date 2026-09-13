@@ -12,6 +12,7 @@ import { getParameter, type SensorReading } from '@/domain/telemetry';
 import { prisma } from '@/lib/db/client';
 import { getVehicleHealth } from '@/services/health/service';
 import { getPredictiveReport } from '@/services/prediction/service';
+import { getQuoteComparison, listQuotes, recordQuote } from '@/services/cost/quotes';
 
 import { listMaintenance, listSessions, listTimeline, logMaintenance, parameterTrend } from './history';
 import { saveDiagnosticSession } from './persistence';
@@ -554,6 +555,63 @@ describe('predictive signals over stored scans', () => {
 
     expect(report.scansConsidered).toBe(0);
     expect(report.signals).toHaveLength(0);
+  });
+});
+
+describe('quotes', () => {
+  const quoteInput = (overrides: Record<string, unknown> = {}) => ({
+    vehicleId,
+    ownerId,
+    source: 'MECHANIC' as const,
+    providedBy: 'Garage A',
+    description: 'Replace intake hose',
+    totalMinor: 800_000,
+    currency: 'KES',
+    receivedAt: new Date(),
+    ...overrides,
+  });
+
+  it('stores money as integer minor units, exactly', async () => {
+    const result = await recordQuote(quoteInput({ totalMinor: 850_050 }));
+    expect(result.ok).toBe(true);
+
+    const stored = await listQuotes(vehicleId, ownerId);
+    // Exact, not approximately: the point of minor units is lost otherwise.
+    expect(stored[0]?.total.amountMinor).toBe(850_050);
+    expect(stored[0]?.total.currency).toBe('KES');
+  });
+
+  it('refuses a fractional amount rather than rounding it', async () => {
+    const result = await recordQuote(quoteInput({ totalMinor: 1234.5 }));
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('INVALID_AMOUNT');
+    expect(await listQuotes(vehicleId, ownerId)).toHaveLength(0);
+  });
+
+  it('compares two quotes without judging either', async () => {
+    await recordQuote(quoteInput({ providedBy: 'Garage A', totalMinor: 800_000 }));
+    await recordQuote(quoteInput({ providedBy: 'Garage B', totalMinor: 1_400_000 }));
+
+    const comparison = await getQuoteComparison(vehicleId, ownerId);
+    const said = comparison.observations.map((o) => o.statement).join(' ');
+
+    expect(comparison.lowest?.providedBy).toBe('Garage A');
+    expect(comparison.spread?.amountMinor).toBe(600_000);
+    expect(said).not.toMatch(/expensive|too much|fair|reasonable/i);
+    expect(comparison.limitations[0]).toMatch(/cannot say what the work should cost/i);
+  });
+
+  it('refuses a vehicle the caller does not own', async () => {
+    const result = await recordQuote(quoteInput({ ownerId: otherOwnerId }));
+
+    expect(result.ok).toBe(false);
+    expect(await listQuotes(vehicleId, ownerId)).toHaveLength(0);
+  });
+
+  it('shows another owner nothing', async () => {
+    await recordQuote(quoteInput());
+    expect(await listQuotes(vehicleId, otherOwnerId)).toHaveLength(0);
   });
 });
 
