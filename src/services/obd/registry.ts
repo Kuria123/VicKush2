@@ -2,7 +2,9 @@ import type { ProviderDescriptor, VehicleDataProvider } from '@/domain/telemetry
 
 import { VehicleSimulator } from '@/domain/simulation';
 
+import { Elm327Provider } from './Elm327Provider';
 import { SimulatedVehicleDataProvider } from './SimulatedVehicleDataProvider';
+import { WebSerialObdLink } from './WebSerialObdLink';
 
 /**
  * The one place a concrete provider is chosen.
@@ -41,6 +43,8 @@ export function resetRegistry(): void {
 }
 
 export const SIMULATED_PROVIDER_ID = 'simulated';
+/** A real adapter over Web Serial. Unverified against hardware: see the link. */
+export const SERIAL_PROVIDER_ID = 'elm327-serial';
 
 export function registerBuiltInProviders(): void {
   // The Stage 6 physical model drops straight into the TelemetrySource seam
@@ -55,6 +59,19 @@ export function registerBuiltInProviders(): void {
         // connection sequence — every other step waits on actual work.
         connectDelayMs: 700,
       }),
+  );
+
+  /*
+   * The real adapter.
+   *
+   * Registered so it can be chosen, and its link declares that it has never
+   * been run against hardware. Withholding it entirely would be one kind of
+   * dishonesty; offering it as though it were tested would be the worse kind.
+   * The connection screen reads `verifiedAgainstHardware` and says so.
+   */
+  registerProvider(
+    SERIAL_PROVIDER_ID,
+    () => new Elm327Provider({ link: new WebSerialObdLink() }),
   );
 }
 

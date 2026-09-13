@@ -668,6 +668,51 @@ fabricate live market prices.**
 Set `COST_PROVIDER` to a registered id to add a pricing source. Unknown ids
 fall back to unconfigured rather than throwing.
 
+## Real OBD integration (Stage 24)
+
+`src/domain/obd` is the protocol; `src/services/obd/Elm327Provider.ts` the
+provider; `WebSerialObdLink` the transport. The provider passes
+`provider-contract.ts` unchanged, which is what the Stage 5 architecture was
+for.
+
+**What is verified and what is not.** The protocol half is pure and fully
+tested: J1979 decoders against the standard's own boundary values, ELM327
+response parsing against real adapter output shapes, capability negotiation,
+DTC and VIN decoding. The provider is exercised end to end through
+`ScriptedObdLink`, which replays exact adapter strings. **The transport has
+never been run against hardware** -- that needs an adapter and a vehicle. The
+split is deliberate: the error-prone part (arithmetic on bytes) is covered,
+and the unverifiable part is a few dozen lines behind a seam.
+
+- **`ObdLinkDescriptor.verifiedAgainstHardware` is declared, not assumed.** A
+  transport written from a datasheet is not the same thing as one that has been
+  run, and a user relying on a reading is entitled to know which they have.
+  Withholding the adapter entirely would be one kind of dishonesty; offering it
+  as though it were tested would be the worse kind.
+- **Capabilities are declared from what was negotiated**, not from what ELM327
+  can do in principle. `LIVE_DATA` appears only after the vehicle has answered
+  the supported-PID bitmap, so the UI never offers a reading the ECU never
+  offered.
+- **A short or undecodable frame yields UNAVAILABLE, never a number.** Decoding
+  three bytes as four produces a plausible reading from a corrupt one.
+- **A PID with no published formula is not guessed at.** An approximate decode
+  of an unknown encoding is indistinguishable from a fabricated reading.
+- **A response is checked against the mode and PID that were asked for.** A
+  late reply decoded against the current request gives a confident reading of
+  the wrong parameter -- the hardest bug to notice, because every number looks
+  reasonable.
+- **Zero DTC byte-pairs are padding, not P0000.** ECUs pad fixed-size blocks.
+- **A VIN is 17 characters or null.** A partial one would reach the
+  identification score as evidence.
+- **`getModules` reports the ECUs that actually answered**, from response
+  headers. `DISCOVER_MODULES` is not claimed: reaching beyond the legislated
+  7E8-7EF range needs manufacturer addressing this build has no table for.
+- **A stream reports the rate it can achieve**, not the one requested. An
+  ELM327 answers one command at a time.
+
+`ScriptedObdLink` is a test double, not a simulator. It replays strings and
+models no vehicle behaviour; `domain/simulation` is the simulator.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
