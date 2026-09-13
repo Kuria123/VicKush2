@@ -46,6 +46,8 @@ export interface UseVehicleConnectionResult extends ConnectionState {
   clearFaults: () => void;
   /** Null when the provider does not model a driver, so the UI can omit it. */
   setThrottle: ((percent: number) => void) | null;
+  /** Parameter ids the vehicle listed. Empty until negotiation completes. */
+  supportedParameterIds: readonly string[];
 }
 
 export function useVehicleConnection(): UseVehicleConnectionResult {
@@ -64,6 +66,13 @@ export function useVehicleConnection(): UseVehicleConnectionResult {
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [summary, setSummary] = useState<ConnectionSummary | null>(null);
+  /**
+   * Which parameters the vehicle listed, not merely how many.
+   *
+   * The capability table has to say whether fuel trim specifically is
+   * available, which a count cannot answer.
+   */
+  const [supportedParameterIds, setSupportedParameterIds] = useState<readonly string[]>([]);
   const [isSimulated, setIsSimulated] = useState(false);
   const [providerName, setProviderName] = useState<string | null>(null);
   const [transport, setTransport] = useState<string | null>(null);
@@ -114,6 +123,7 @@ export function useVehicleConnection(): UseVehicleConnectionResult {
     cancelledRef.current = false;
     setPhases(initialPhases());
     setSummary(null);
+    setSupportedParameterIds([]);
     setReady(false);
     setRunning(true);
 
@@ -228,6 +238,10 @@ export function useVehicleConnection(): UseVehicleConnectionResult {
       }`,
     });
 
+    // Kept for the capability table, which needs to know which parameters
+    // the vehicle listed rather than how many.
+    setSupportedParameterIds([...parameters.value]);
+
     /* --- READY --------------------------------------------------------- */
     update('READY', { status: 'DONE', detail: 'Vehicle ready' });
 
@@ -306,5 +320,6 @@ export function useVehicleConnection(): UseVehicleConnectionResult {
     injectDtc,
     clearFaults,
     setThrottle: canThrottle ? setThrottle : null,
+    supportedParameterIds,
   };
 }

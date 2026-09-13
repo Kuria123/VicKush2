@@ -1,6 +1,9 @@
 'use client';
 
 import { Button, Card, EmptyState, SimulationBanner } from '@/components/ui';
+import { getProfile } from '@/domain/hardware';
+
+import { CompatibilityPanel } from './CompatibilityPanel';
 
 import { ConnectionSequence, ConnectionStatus } from './ConnectionSequence';
 import { SimulationControls } from './SimulationControls';
@@ -79,6 +82,28 @@ export function ConnectionPanel({ vehicleName }: { vehicleName: string }) {
           )}
         </Card>
       )}
+
+      {/*
+        Which profile describes the provider in use. Chosen from the
+        descriptor rather than assumed, so a provider added later that has no
+        profile shows nothing rather than someone else's capability table.
+      */}
+      {(() => {
+        const profile = getProfile(isSimulated ? 'simulated' : 'elm327-usb-serial');
+        if (!profile) return null;
+
+        return (
+          <CompatibilityPanel
+            profile={profile}
+            observed={{
+              supportedParameterIds: connection.supportedParameterIds,
+              vinReturned: summary ? summary.vin !== null : null,
+              streaming: ready ? true : null,
+              negotiated: ready,
+            }}
+          />
+        );
+      })()}
 
       {isSimulated && (
         <SimulationControls

@@ -713,6 +713,42 @@ and the unverifiable part is a few dozen lines behind a seam.
 `ScriptedObdLink` is a test double, not a simulator. It replays strings and
 models no vehicle behaviour; `domain/simulation` is the simulator.
 
+## Hardware compatibility (Stage 25)
+
+`src/domain/hardware` holds capability profiles, the three-state model and the
+resolver. The brief asks for a tick-or-cross capability list and separately
+forbids implying a capability exists when it does not. Those pull against each
+other, and resolving it is the design.
+
+- **There are three states, not two.** A cross means "established that it
+  cannot". Before a vehicle has been asked, rendering one is a definite
+  negative nobody established, and a tick is a guess about the reader's car. So
+  `UNKNOWN` is a first-class state with its own mark and its own wording, never
+  collapsed into a cross to make a table look decisive.
+- **How a capability became known is carried with it.** `REQUIRED_BY_STANDARD`,
+  `OBSERVED`, `DECLARED_BY_PROFILE`, `RULED_OUT`, `NOT_ESTABLISHED`. A datasheet
+  claim and a vehicle actually answering are different evidence and must not
+  render identically.
+- **Observation overrides declaration, including downwards.** A capability a
+  profile lists as supported, which the vehicle did not report, becomes
+  NOT_SUPPORTED. That is the case the brief's rule is really about: a tick
+  surviving on the strength of a datasheet after the vehicle said no.
+- **A downgrade names the vehicle, not the adapter.** A reader whose adapter is
+  fine should not be left thinking it is faulty.
+- **Every row carries a reason.** A bare cross invites the reader to assume a
+  hardware fault when the limitation is usually in this build -- ABS and
+  transmission say so explicitly.
+- **`RULED_OUT` cannot be overturned by an observation.** Those are limitations
+  of this software, and no connection report changes them.
+- **Only `SUPPORTED` may be offered as an action.** `UNKNOWN` must not: a
+  control that fails half the time teaches the user to distrust the ones that
+  work.
+- **Profiles describe classes, never commercial products.** This project has
+  tested no branded adapter, and a profile naming one would be fabricated
+  hardware data. A test asserts it.
+- **Unselectable profiles are not offered as choices.** Bluetooth and Wi-Fi are
+  described but have no transport, so they are documented rather than listed.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
