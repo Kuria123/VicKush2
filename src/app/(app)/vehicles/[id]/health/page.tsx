@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { HealthPanel } from '@/features/health/HealthPanel';
+import { TrendPanel } from '@/features/health/TrendPanel';
 import { currentUserId } from '@/lib/auth';
 import { getVehicleHealth } from '@/services/health/service';
+import { getPredictiveReport } from '@/services/prediction/service';
 import { getVehicleForOwner } from '@/services/vehicle/queries';
 
 export const metadata: Metadata = { title: 'Vehicle health' };
@@ -18,7 +20,10 @@ export default async function VehicleHealthPage(props: PageProps<'/vehicles/[id]
   const vehicle = await getVehicleForOwner(id, userId);
   if (!vehicle) notFound();
 
-  const health = await getVehicleHealth(id, userId);
+  const [health, trends] = await Promise.all([
+    getVehicleHealth(id, userId),
+    getPredictiveReport(id, userId),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -37,6 +42,10 @@ export default async function VehicleHealthPage(props: PageProps<'/vehicles/[id]
       </header>
 
       <HealthPanel health={health} />
+
+      <div className="mt-10">
+        <TrendPanel report={trends} />
+      </div>
     </div>
   );
 }

@@ -138,3 +138,20 @@ test('another account cannot open the health page', async ({ page, context }) =>
   await page.goto(`/vehicles/${id}/health`);
   await expect(page.getByText('Vehicle not found')).toBeVisible();
 });
+
+test('trends say nothing from a single scan, and say why', async ({ page }) => {
+  test.setTimeout(240_000);
+
+  const id = await signUpWithVehicle(page);
+  await scanAndSave(page, id, 'VACUUM_LEAK');
+
+  await page.goto(`/vehicles/${id}/health`);
+
+  await expect(page.getByText('What is trending')).toBeVisible();
+  // A direction needs three scans; one cannot be distinguished from variation.
+  await expect(page.getByText(/a direction needs at least three/i)).toBeVisible();
+
+  // Rule 1: nothing is projected from a single reading.
+  await expect(page.getByText(/will fail|definitely/i)).toHaveCount(0);
+  await expect(page.getByText(/Nothing here is extrapolated/i)).toBeVisible();
+});

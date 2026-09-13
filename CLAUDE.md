@@ -573,6 +573,35 @@ so rather than substituting anything.
 Set `VIDEO_PROVIDER` to a registered id to enable one. Unknown ids fall back to
 unconfigured rather than throwing at runtime.
 
+## Predictive maintenance (Stage 21)
+
+`src/domain/prediction` detects directions in a vehicle's recorded history.
+The brief states the requirement as a contrast, and everything follows from it:
+"Battery health declining" yes, "Battery definitely failed" no.
+
+- **Nothing is extrapolated.** No failure date, remaining life or replacement
+  interval -- and no arithmetic that could produce one. Three scans of one
+  vehicle cannot support any of them.
+- **Every signal carries a `notClaiming` field**, rendered directly beneath the
+  headline rather than in a footnote. The likeliest way this feature does harm
+  is a reader finishing the sentence themselves -- "voltage declining" becoming
+  "the battery is failing" -- so it is finished for them, in the same breath.
+- **Fewer than three saved scans and no direction is claimed about anything.**
+- **Only the adverse direction is reported.** Voltage climbing is not a fault,
+  and flagging it would teach the reader to ignore the panel.
+- **Strength reflects the evidence, never the severity.** It is a function of
+  how many scans and how consistent, not of how alarming the thing would be if
+  true; conflating them turns a weak observation about something serious into a
+  strong claim.
+- **A repeated code is reported by identifier only.** No meaning is attached,
+  because there is still no authoritative table (Rule 1).
+- **Rising fault frequency counts findings; it does not read them.** The signal
+  says "more is being found per scan", never "the vehicle is deteriorating",
+  and offers the confound: later scans may simply have covered more conditions.
+
+The measurement is the Stage 16 `detectTrend`, reused rather than
+reimplemented. What this stage adds is interpretation and wording.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

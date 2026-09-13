@@ -11,6 +11,7 @@ import { VehicleSimulator, type ScenarioId } from '@/domain/simulation';
 import { getParameter, type SensorReading } from '@/domain/telemetry';
 import { prisma } from '@/lib/db/client';
 import { getVehicleHealth } from '@/services/health/service';
+import { getPredictiveReport } from '@/services/prediction/service';
 
 import { listMaintenance, listSessions, listTimeline, logMaintenance, parameterTrend } from './history';
 import { saveDiagnosticSession } from './persistence';
@@ -505,6 +506,54 @@ describe('repair verification', () => {
     });
 
     expect(await listRepairs(vehicleId, otherOwnerId)).toHaveLength(0);
+  });
+});
+
+describe('predictive signals over stored scans', () => {
+  it('claims no direction from fewer than three scans', async () => {
+    await save('VACUUM_LEAK');
+    const report = await getPredictiveReport(vehicleId, ownerId);
+
+    expect(report.signals).toHaveLength(0);
+    expect(report.limitations.join(' ')).toMatch(/at least 3 saved scans/i);
+  });
+
+  it('detects a code that keeps returning, without interpreting it', async () => {
+    const day = 86_400_000;
+    await save('VACUUM_LEAK', new Date(Date.now() - 3 * day));
+    await save('VACUUM_LEAK', new Date(Date.now() - 2 * day));
+    await save('VACUUM_LEAK', new Date(Date.now() - day));
+
+    const report = await getPredictiveReport(vehicleId, ownerId);
+    const repeated = report.signals.find((signal) => signal.kind === 'REPEATED_DTC');
+
+    expect(repeated).toBeDefined();
+    expect(repeated!.headline).toMatch(/has been recorded in 3 of 3 scans/);
+    // Rule 1: no meaning is attached to the code.
+    expect(repeated!.notClaiming).toMatch(/not interpreted/i);
+  });
+
+  it('never extrapolates, whatever the history shows', async () => {
+    const day = 86_400_000;
+    await save('VACUUM_LEAK', new Date(Date.now() - 3 * day));
+    await save('LEAN_MIXTURE', new Date(Date.now() - 2 * day));
+    await save('VACUUM_LEAK', new Date(Date.now() - day));
+
+    const report = await getPredictiveReport(vehicleId, ownerId);
+    const claims = report.signals
+      .flatMap((signal) => [signal.headline, signal.detail, signal.suggestedCheck])
+      .join(' ');
+
+    expect(claims).not.toMatch(/will fail|definitely|remaining life/i);
+    expect(report.limitations.join(' ')).toMatch(/Nothing here is extrapolated/i);
+  });
+
+  it('shows another owner nothing', async () => {
+    await save('VACUUM_LEAK');
+    const report = await getPredictiveReport(vehicleId, otherOwnerId);
+
+    expect(report.scansConsidered).toBe(0);
+    expect(report.signals).toHaveLength(0);
   });
 });
 
