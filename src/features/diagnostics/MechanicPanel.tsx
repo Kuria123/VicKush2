@@ -63,7 +63,7 @@ export function MechanicPanel({
     setLoading(true);
 
     try {
-      const response = await fetch('/api/ai/mechanic', {
+      const response = await fetch('/api/v1/ai/mechanic', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({

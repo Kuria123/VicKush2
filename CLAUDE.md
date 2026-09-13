@@ -749,6 +749,89 @@ other, and resolving it is the design.
 - **Unselectable profiles are not offered as choices.** Bluetooth and Wi-Fi are
   described but have no transport, so they are documented rather than listed.
 
+## Production hardening (Stage 26)
+
+### Rate limiting
+
+`src/lib/rate-limit` — a token bucket per user per route, not a fixed window.
+A window lets someone spend a full allowance at 11:59 and another at 12:00,
+twice the intended rate at the worst moment.
+
+- **Keyed by user, not IP.** What is protected is an upstream cost incurred per
+  account. An IP key punishes everyone behind one NAT while doing nothing about
+  the case that matters.
+- **`Retry-After` is always sent on a refusal.** Without it a client cannot
+  back off and will retry immediately, which is the behaviour the limit exists
+  to prevent.
+- **It is in-process memory, and that is stated.** Effective against one
+  account looping a paid request; ineffective across multiple instances, where
+  each grants the full allowance independently. Shared storage is a deployment
+  decision, and pretending otherwise would be the wrong reassurance.
+
+### Security headers
+
+Set in `next.config.ts` rather than the proxy, so they apply to every response
+including static assets and survive a change to the auth matcher. `serial=(self)`
+stays in the permissions policy because the OBD adapter needs it; everything
+else a diagnostic tool has no use for is off. Script `'unsafe-inline'` is
+development-only. Style `'unsafe-inline'` is still required by Tailwind's
+injected styles -- removing it needs a nonce through every render, which is
+worth doing and is not a change to make quietly.
+
+### Audit log
+
+`src/services/audit` — deliberately narrow. An audit log that records
+everything is one nobody reads, and it becomes a second copy of the user's data
+with none of the protections the first has.
+
+- **No payloads.** `detail` is a one-line summary, never a request body.
+- **Writing an entry never fails the action it describes.** An audit log that
+  can take down the operation it observes is a liability. Failures are reported
+  rather than swallowed.
+- **Scoped by userId on read**, like every other query here.
+
+### API versioning
+
+Routes live under `/api/v1`. Responses carry `version`. The policy: a breaking
+change to a response shape gets a new prefix rather than a silent edit, because
+a mobile client (Stage 27) cannot be redeployed in step with the server.
+
+### Query optimization
+
+`persistence.ts` batched its per-row writes. A diagnosis carries a dozen
+findings and as many causes, and one round trip each turned a single save into
+roughly forty inside a transaction, holding locks for the whole duration.
+
+### Error monitoring
+
+`src/lib/logging/monitoring.ts` is a seam, defaulting to the structured logger
+so nothing is swallowed. A reporter that throws is caught: monitoring must not
+turn a logged problem into an outage.
+
+### Backup and migration strategy
+
+Not code, so stated rather than implemented:
+
+- **Migrations** are Prisma migration files, applied in order, committed with
+  the change that needs them. Never edited once applied — a migration that has
+  run somewhere is history, and rewriting it makes two databases that claim the
+  same version disagree. A correction is a new migration.
+- **Backups** are the operator's, not this application's. What matters from
+  here is that the schema has no data this app cannot rebuild except what users
+  entered: scans, diagnoses, repairs, quotes and maintenance. Losing them loses
+  real history, so point-in-time recovery is the requirement, not nightly
+  snapshots.
+- **Restore is untested here.** A backup nobody has restored is a hypothesis.
+
+### Not done, and why
+
+**Background jobs.** The brief says "where necessary". Nothing here needs one:
+analysis is synchronous and fast, and the AI calls are user-initiated and
+awaited. Adding a queue would be infrastructure with no work to put in it.
+
+**Caching.** Every read is user-scoped and already indexed. A cache would add
+invalidation bugs to queries that are not slow.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

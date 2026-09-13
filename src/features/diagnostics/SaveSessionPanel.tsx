@@ -55,7 +55,7 @@ export function SaveSessionPanel({
     setState({ status: 'saving' });
 
     try {
-      const response = await fetch(`/api/vehicles/${vehicleId}/sessions`, {
+      const response = await fetch(`/api/v1/vehicles/${vehicleId}/sessions`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({

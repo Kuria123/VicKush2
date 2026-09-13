@@ -688,6 +688,53 @@ model RepairQuote {
   @@map("repair_quotes")
 }
 
+enum AuditAction {
+  VEHICLE_CREATED
+  VEHICLE_UPDATED
+  VEHICLE_DELETED
+  SESSION_SAVED
+  DTCS_CLEARED
+  REPAIR_RECORDED
+  REPAIR_VERIFIED
+  QUOTE_RECORDED
+  AI_EXPLANATION_REQUESTED
+  AI_MECHANIC_REQUESTED
+  RATE_LIMITED
+}
+
+/// An append-only record of actions worth being able to reconstruct.
+///
+/// Deliberately narrow. An audit log that records everything is one nobody
+/// reads, and it becomes a second copy of the user's data with none of the
+/// protections the first copy has. What is here is what someone would need to
+/// answer "who cleared the fault codes on my car, and when" — an action that
+/// destroys evidence on a real vehicle and cannot be undone.
+///
+/// No payloads are stored: `detail` is a short human-readable summary, never
+/// the request body. A log that carries the data it describes doubles the
+/// surface area of a breach.
+model AuditEvent {
+  id String @id @default(cuid())
+
+  /// Null for an action taken before sign-in, or by a background process.
+  userId    String?
+  action    AuditAction
+  /// What the action was performed on, when it was performed on something.
+  vehicleId String?
+
+  /// One line. Never a request or response body.
+  detail    String? @db.VarChar(300)
+  /// Whether the action succeeded. A refused action is worth recording too.
+  succeeded Boolean @default(true)
+
+  occurredAt DateTime @default(now())
+
+  @@index([userId, occurredAt])
+  @@index([vehicleId, occurredAt])
+  @@index([action, occurredAt])
+  @@map("audit_events")
+}
+
 // ---------------------------------------------------------------------------
 // The timeline spine (Stage 17 reads this)
 // ---------------------------------------------------------------------------

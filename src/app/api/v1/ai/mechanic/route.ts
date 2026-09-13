@@ -1,5 +1,6 @@
 import { supportsConversation } from '@/domain/ai';
-import { currentUserId } from '@/lib/auth';
+import { API_VERSION, guard, handled } from '@/lib/api/guard';
+import { recordAuditAsync } from '@/services/audit/audit';
 import { resolveAIProvider } from '@/services/ai/registry';
 
 /**
@@ -21,10 +22,13 @@ interface IncomingMessage {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const userId = await currentUserId();
-  if (!userId) {
-    return Response.json({ error: 'Not signed in.' }, { status: 401 });
-  }
+  const allowed = await guard({
+    rateLimit: 'ai-mechanic',
+    auditOnLimit: 'AI_MECHANIC_REQUESTED',
+  });
+  if (!allowed.ok) return allowed.response;
+
+  return handled('api/v1/ai/mechanic', allowed.userId, async () => {
 
   let payload: unknown;
   try {
@@ -86,7 +90,17 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  return Response.json({ reply: result.value });
+  recordAuditAsync({
+    action: 'AI_MECHANIC_REQUESTED',
+    userId: allowed.userId,
+    detail: `${messages.length} messages in the exchange`,
+  });
+
+  return Response.json(
+    { reply: result.value, version: API_VERSION },
+    { headers: allowed.headers },
+  );
+  });
 }
 
 /** Null on anything malformed: a partly-understood transcript is not usable. */

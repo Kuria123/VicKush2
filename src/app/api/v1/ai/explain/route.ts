@@ -1,5 +1,6 @@
+import { API_VERSION, guard, handled } from '@/lib/api/guard';
+import { recordAuditAsync } from '@/services/audit/audit';
 import { resolveAIProvider } from '@/services/ai/registry';
-import { currentUserId } from '@/lib/auth';
 
 /**
  * Explains a diagnosis.
@@ -22,10 +23,13 @@ import { currentUserId } from '@/lib/auth';
 const MAX_CONTEXT_BYTES = 64 * 1024;
 
 export async function POST(request: Request): Promise<Response> {
-  const userId = await currentUserId();
-  if (!userId) {
-    return Response.json({ error: 'Not signed in.' }, { status: 401 });
-  }
+  const allowed = await guard({
+    rateLimit: 'ai-explain',
+    auditOnLimit: 'AI_EXPLANATION_REQUESTED',
+  });
+  if (!allowed.ok) return allowed.response;
+
+  return handled('api/v1/ai/explain', allowed.userId, async () => {
 
   let payload: unknown;
   try {
@@ -63,5 +67,15 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  return Response.json({ explanation: result.value });
+  recordAuditAsync({
+    action: 'AI_EXPLANATION_REQUESTED',
+    userId: allowed.userId,
+    detail: `Explained with ${descriptor.model ?? 'no model'}`,
+  });
+
+  return Response.json(
+    { explanation: result.value, version: API_VERSION },
+    { headers: allowed.headers },
+  );
+  });
 }

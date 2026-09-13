@@ -130,9 +130,17 @@ export async function saveDiagnosticSession(
       select: { id: true },
     });
 
-    for (const finding of input.analysis.findings) {
-      await tx.diagnosisFinding.create({
-        data: {
+    /*
+     * One statement per table rather than one per row.
+     *
+     * A diagnosis carries a dozen findings and as many causes, and issuing a
+     * round trip for each turned a single save into forty of them inside a
+     * transaction — which holds locks for the whole duration. `createMany`
+     * makes it one statement per table.
+     */
+    if (input.analysis.findings.length > 0) {
+      await tx.diagnosisFinding.createMany({
+        data: input.analysis.findings.map((finding) => ({
           diagnosisId: diagnosis.id,
           findingId: finding.id,
           title: finding.title,
@@ -140,13 +148,14 @@ export async function saveDiagnosticSession(
           severity: finding.severity,
           supporting: serialiseEvidence(finding.supporting),
           opposing: serialiseEvidence(finding.opposing),
-        },
+        })),
       });
     }
 
-    for (const cause of [...input.differential.causes, ...input.differential.ruledOut]) {
-      await tx.diagnosisCause.create({
-        data: {
+    const allCauses = [...input.differential.causes, ...input.differential.ruledOut];
+    if (allCauses.length > 0) {
+      await tx.diagnosisCause.createMany({
+        data: allCauses.map((cause) => ({
           diagnosisId: diagnosis.id,
           causeId: cause.id,
           label: cause.label,
@@ -159,18 +168,18 @@ export async function saveDiagnosticSession(
           keyObservationMade: cause.keyObservationMade,
           contributions: serialiseContributions(cause.contributions),
           exclusions: serialiseContributions(cause.exclusions),
-        },
+        })),
       });
     }
 
-    for (const result of input.results) {
-      await tx.confirmationTestRun.create({
-        data: {
+    if (input.results.length > 0) {
+      await tx.confirmationTestRun.createMany({
+        data: input.results.map((result) => ({
           diagnosisId: diagnosis.id,
           testId: result.testId,
           outcome: result.outcome,
           note: result.note?.slice(0, 500) ?? null,
-        },
+        })),
       });
     }
 

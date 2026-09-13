@@ -1,4 +1,5 @@
-import { currentUserId } from '@/lib/auth';
+import { API_VERSION, guard, handled } from '@/lib/api/guard';
+import { recordAuditAsync } from '@/services/audit/audit';
 import { saveDiagnosticSession } from '@/services/diagnostics/persistence';
 
 /**
@@ -19,10 +20,13 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const userId = await currentUserId();
-  if (!userId) return Response.json({ error: 'Not signed in.' }, { status: 401 });
+  const allowed = await guard({ rateLimit: 'save-session' });
+  if (!allowed.ok) return allowed.response;
 
+  const userId = allowed.userId;
   const { id: vehicleId } = await context.params;
+
+  return handled('api/v1/vehicles/sessions', userId, async () => {
 
   const raw = await request.text();
   if (new TextEncoder().encode(raw).length > MAX_BYTES) {
@@ -74,7 +78,18 @@ export async function POST(
     );
   }
 
-  return Response.json({ sessionId: result.sessionId }, { status: 201 });
+  recordAuditAsync({
+    action: 'SESSION_SAVED',
+    userId,
+    vehicleId,
+    detail: `${payload.analysis.sampleCount} samples`,
+  });
+
+  return Response.json(
+    { sessionId: result.sessionId, version: API_VERSION },
+    { status: 201, headers: allowed.headers },
+  );
+  });
 }
 
 /* The client sends the domain objects as JSON; the service re-reads only the

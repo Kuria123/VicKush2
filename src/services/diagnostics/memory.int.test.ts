@@ -13,6 +13,7 @@ import { prisma } from '@/lib/db/client';
 import { getVehicleHealth } from '@/services/health/service';
 import { getPredictiveReport } from '@/services/prediction/service';
 import { getQuoteComparison, listQuotes, recordQuote } from '@/services/cost/quotes';
+import { listAuditEvents, recordAudit } from '@/services/audit/audit';
 
 import { listMaintenance, listSessions, listTimeline, logMaintenance, parameterTrend } from './history';
 import { saveDiagnosticSession } from './persistence';
@@ -612,6 +613,56 @@ describe('quotes', () => {
   it('shows another owner nothing', async () => {
     await recordQuote(quoteInput());
     expect(await listQuotes(vehicleId, otherOwnerId)).toHaveLength(0);
+  });
+});
+
+describe('audit log', () => {
+  it('records an action against the user and vehicle', async () => {
+    await recordAudit({
+      action: 'DTCS_CLEARED',
+      userId: ownerId,
+      vehicleId,
+      detail: 'Cleared 2 stored codes',
+    });
+
+    const events = await listAuditEvents({ userId: ownerId });
+    expect(events[0]?.action).toBe('DTCS_CLEARED');
+    expect(events[0]?.vehicleId).toBe(vehicleId);
+    expect(events[0]?.succeeded).toBe(true);
+  });
+
+  it('records a refused action too', async () => {
+    await recordAudit({ action: 'RATE_LIMITED', userId: ownerId, succeeded: false });
+
+    const events = await listAuditEvents({ userId: ownerId });
+    expect(events[0]?.succeeded).toBe(false);
+  });
+
+  it('never lets another user read the trail', async () => {
+    await recordAudit({ action: 'SESSION_SAVED', userId: ownerId, vehicleId });
+
+    // An audit log readable across accounts would be a worse leak than the
+    // data it protects.
+    expect(await listAuditEvents({ userId: otherOwnerId })).toHaveLength(0);
+  });
+
+  it('truncates a long detail rather than losing the entry', async () => {
+    await recordAudit({ action: 'SESSION_SAVED', userId: ownerId, detail: 'x'.repeat(900) });
+
+    const events = await listAuditEvents({ userId: ownerId });
+    expect(events[0]?.detail?.length).toBe(300);
+  });
+
+  it('filters by vehicle when asked', async () => {
+    const other = await prisma.vehicle.create({
+      data: { ownerId, make: 'Other', model: 'Car', year: 2010 },
+      select: { id: true },
+    });
+
+    await recordAudit({ action: 'SESSION_SAVED', userId: ownerId, vehicleId });
+    await recordAudit({ action: 'SESSION_SAVED', userId: ownerId, vehicleId: other.id });
+
+    expect(await listAuditEvents({ userId: ownerId, vehicleId })).toHaveLength(1);
   });
 });
 

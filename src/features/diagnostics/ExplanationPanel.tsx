@@ -48,7 +48,7 @@ export function ExplanationPanel({
     setFailure(null);
 
     try {
-      const response = await fetch('/api/ai/explain', {
+      const response = await fetch('/api/v1/ai/explain', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
