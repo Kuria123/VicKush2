@@ -974,6 +974,82 @@ control left in place after the feature behind it exists tells the user it does
 not exist, which is its own false statement about the product. They are now
 links to History, Health and the referral report.
 
+## Vehicle recognition from photographs
+
+`src/domain/recognition` decides what a vision model is allowed to assert;
+`src/services/recognition` calls one; `RecognisePanel` fills in the ordinary
+add-vehicle form. Unconfigured until `ANTHROPIC_API_KEY` is set.
+
+The feature exists to remove typing, not to remove the owner. A model looking
+at a car does two different things, and treating them as one turns this into a
+fabrication engine:
+
+- **Reading** text that is physically present — a VIN plate, a chassis stamp, a
+  badge, a number plate. That is evidence, and it is as good as the photograph
+  is legible.
+- **Inferring** make, model and year from bodywork. That is a guess, and it is
+  least reliable on exactly the fleet this product targets. A Harrier and a
+  Lexus RX are the same vehicle wearing different badges; a facelift two model
+  years apart is a bumper detail. A model states either with total confidence.
+
+So:
+
+- **Nothing is a fact; everything is a proposal.** `Proposal<T>` is a union
+  like `SensorReading` and `SpecValue` — a value together with its basis and
+  the observation behind it, or the reason nothing was established. There is no
+  shape that carries a value without saying how it was arrived at, so a caller
+  cannot render a guess as though it were read off a plate.
+- **Nothing is saved from the panel.** It fills the form; the owner reads,
+  corrects and submits it through the same action, the same validation and the
+  same duplicate-VIN check as ever. A second path into the database would be a
+  second set of rules to forget to apply.
+- **The interpreter can only lower confidence, never raise it.** Each basis has
+  a ceiling (`MAX_CONFIDENCE_BY_BASIS`). The cap on
+  `INFERRED_FROM_APPEARANCE` is not a guess about model quality; it states that
+  no photograph of bodywork establishes a model year.
+- **A VIN must be read and must pass the structural check.** It cannot be
+  inferred at all — no bodywork implies a VIN, so one arriving that way was
+  invented however valid it looks. This is the most dangerous field in the
+  product: a VIN is twenty points of identification evidence and is printed on
+  the report a mechanic works from.
+- **A claim below `MINIMUM_CONFIDENCE` is not offered.** An unsure suggestion
+  sitting in a form field becomes an asserted fact by way of a confirmation
+  nobody read carefully — worse than an empty box.
+- **Two claims about one field: the first stands, the second is recorded as
+  unresolved.** Taking the more confident would be resolving a disagreement
+  this build cannot resolve, and Harrier-vs-RX is exactly that case.
+- **Rejected claims are kept and shown**, not dropped. How often a model offers
+  a VIN that is not a VIN is worth being able to see (Rule 3).
+- **`IMAGE_RECOGNISED` is its own identification source, trusted at 0.6 —
+  below `USER_ENTERED`.** The owner did accept it, so it is not a guess nobody
+  vouched for; but confirming is a weaker act than recalling. Typing "Harrier"
+  requires knowing it; accepting it requires only not objecting, and the
+  proposal arrives already filled in and looking authoritative.
+
+### Video never leaves the device
+
+`src/features/vehicles/capture.ts` samples frames in the browser. A walkaround
+clip is tens of megabytes of the owner's driveway, their house and their number
+plate, and the model needs a handful of stills out of it. Frames are cut and
+downscaled client-side; only those are uploaded.
+
+It is also the cheaper answer. Server-side decoding would mean ffmpeg, a queue
+and a bucket holding clips nothing reads back — a great deal of infrastructure
+to arrive at the same eight JPEGs (Rule 13).
+
+Frames are sampled at even intervals, because a walkaround is a slow circuit of
+the vehicle and even spacing gives four different sides of it. Picking "the
+sharpest" frames would cluster them wherever the camera paused, which is
+usually the same side.
+
+### What it deliberately does not do
+
+**It never comments on condition.** Recognition is identification. No
+photograph shows whether a car is faulty or safe to drive, and a test asserts
+the prompt contains no such vocabulary — otherwise this quietly becomes a
+diagnosis made from a picture, which is the opposite of everything the previous
+twenty-eight stages built.
+
 ## Accounts and sign-in
 
 There is **no role system**. Every account owns its own vehicles and sees only

@@ -159,6 +159,10 @@ enum ModuleStatus {
 
 enum IdentificationSource {
   USER_ENTERED
+  /// Proposed by a vision model from a photograph and accepted by the owner.
+  /// Kept distinct from USER_ENTERED because confirming is a weaker act than
+  /// recalling, and a mechanic reading a report is entitled to know which.
+  IMAGE_RECOGNISED
   VIN_DECODED
   OBD_REPORTED
   UNKNOWN
@@ -699,6 +703,7 @@ enum AuditAction {
   QUOTE_RECORDED
   AI_EXPLANATION_REQUESTED
   AI_MECHANIC_REQUESTED
+  VEHICLE_RECOGNISED
   RATE_LIMITED
 }
 

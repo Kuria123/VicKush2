@@ -107,6 +107,7 @@ export type ModuleStatus = (typeof MODULE_STATUSES)[number];
  */
 export const IDENTIFICATION_SOURCES = [
   'USER_ENTERED',
+  'IMAGE_RECOGNISED',
   'VIN_DECODED',
   'OBD_REPORTED',
   'UNKNOWN',

@@ -67,18 +67,28 @@ export async function createVehicleAction(
 
   const { engineDisplacementCc, fuelType, transmissionType, ...identity } = parsed.data;
 
+  /*
+   * Where these values came from.
+   *
+   * A photograph-derived identity the owner accepted is not the same evidence
+   * as one they recalled and typed, and the confidence model already knows the
+   * difference (SOURCE_TRUST). Recording both as USER_ENTERED would make a
+   * confirmation worth as much as knowledge.
+   */
+  const source = formData.get('fromRecognition') === '1' ? 'IMAGE_RECOGNISED' : 'USER_ENTERED';
+
   let vehicleId: string;
   try {
     vehicleId = await createVehicle(userId, {
       ...identity,
-      source: 'USER_ENTERED',
+      source,
       configuration:
         engineDisplacementCc || fuelType || transmissionType
           ? {
               engineDisplacementCc,
               fuelType,
               transmissionType,
-              source: 'USER_ENTERED',
+              source,
             }
           : undefined,
     });

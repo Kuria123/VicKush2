@@ -39,6 +39,17 @@ export const SOURCE_TRUST: Record<IdentificationSource, number> = {
   OBD_REPORTED: 1,
   VIN_DECODED: 0.9,
   USER_ENTERED: 0.7,
+  /*
+   * Below a typed value, deliberately.
+   *
+   * A photograph-derived identity was still accepted by the owner, so it is
+   * not a guess nobody vouched for. But confirming is a weaker act than
+   * recalling: typing "Harrier" requires knowing it, while accepting it
+   * requires only not objecting, and a model's proposal arrives already
+   * filled in and looking authoritative. Scoring the two the same would make
+   * a confirmation worth as much as knowledge.
+   */
+  IMAGE_RECOGNISED: 0.6,
   UNKNOWN: 0.5,
 };
 

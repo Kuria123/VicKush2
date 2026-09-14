@@ -28,6 +28,7 @@ export type AuditAction =
   | 'QUOTE_RECORDED'
   | 'AI_EXPLANATION_REQUESTED'
   | 'AI_MECHANIC_REQUESTED'
+  | 'VEHICLE_RECOGNISED'
   | 'RATE_LIMITED';
 
 export interface AuditInput {

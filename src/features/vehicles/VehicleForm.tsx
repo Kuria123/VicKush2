@@ -32,6 +32,12 @@ interface VehicleFormProps<T extends string> {
   cancelHref: Route<T>;
   /** Configuration fields are only offered when creating. */
   showConfiguration?: boolean;
+  /**
+   * Whether these values were proposed from a photograph and accepted, rather
+   * than recalled and typed. Recorded as provenance, because a mechanic
+   * reading a report is entitled to know which — see SOURCE_TRUST.
+   */
+  fromRecognition?: boolean;
 }
 
 function SubmitButton({ label }: { label: string }) {
@@ -51,6 +57,7 @@ export function VehicleForm<T extends string>({
   submitLabel,
   cancelHref,
   showConfiguration = true,
+  fromRecognition = false,
 }: VehicleFormProps<T>) {
   const [state, formAction] = useActionState<ActionResult | null, FormData>(action, null);
 
@@ -67,6 +74,13 @@ export function VehicleForm<T extends string>({
           {formError}
         </p>
       )}
+
+      {/*
+        * Provenance, not a permission. Forging this can only lower the
+        * identification score of the forger's own vehicle, so there is nothing
+        * to gain by it and no need to defend it server-side.
+        */}
+      {fromRecognition && <input type="hidden" name="fromRecognition" value="1" />}
 
       <Card>
         <h2 className="mb-1 text-lg font-semibold tracking-tight">Identity</h2>
