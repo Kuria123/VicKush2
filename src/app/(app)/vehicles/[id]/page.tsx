@@ -147,12 +147,28 @@ export default async function VehiclePage(props: PageProps<'/vehicles/[id]'>) {
           >
             Live scan
           </Link>
-          <DisabledAction label="Run diagnostic" stage="Stage 9" />
-          <DisabledAction label="View history" stage="Stage 15" />
+          <Link
+            href={`/vehicles/${vehicle.id}/history`}
+            className="border-line hover:bg-surface-sunken inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium transition-colors"
+          >
+            History
+          </Link>
+          <Link
+            href={`/vehicles/${vehicle.id}/health`}
+            className="border-line hover:bg-surface-sunken inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium transition-colors"
+          >
+            Health
+          </Link>
+          <Link
+            href={`/vehicles/${vehicle.id}/referral`}
+            className="border-line hover:bg-surface-sunken inline-flex h-9 items-center rounded-md border px-4 text-sm font-medium transition-colors"
+          >
+            Report for a mechanic
+          </Link>
         </div>
         <p className="text-content-muted mt-4 text-xs">
-          Connecting uses a simulated vehicle and says so on screen. The greyed-out actions are
-          disabled because the functionality behind them does not exist yet.
+          Connecting uses a simulated vehicle and says so on screen. A diagnosis is produced from a
+          live scan, so it is reached through that rather than as a separate action.
         </p>
       </Card>
     </div>
@@ -165,19 +181,5 @@ function Spec({ label, value }: { label: string; value: string | null }) {
       <dt className="text-content-secondary">{label}</dt>
       <dd className={value ? 'font-medium' : 'text-content-muted'}>{value ?? 'Not known'}</dd>
     </div>
-  );
-}
-
-function DisabledAction({ label, stage }: { label: string; stage: string }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title={`Not implemented yet — planned for ${stage}.`}
-      className="border-line text-content-muted inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-md border px-4 text-sm font-medium opacity-60"
-    >
-      {label}
-      <span className="text-2xs font-normal">({stage})</span>
-    </button>
   );
 }

@@ -886,6 +886,94 @@ underneath them. That is not duplicated business logic -- there is no logic in
 them to duplicate, which is what the architecture rule at the top of this file
 has been buying all along.
 
+## Marketplaces (Stage 28)
+
+The brief lists seven things: Find Mechanic, Service Centres, Parts, Bookings,
+Quotes, Mechanic Profiles and Vehicle Diagnostic Reports. Six of them need a
+directory of real businesses -- real names, real addresses, real people. This
+build has none, and there is no honest way to manufacture them: a plausible
+garage with a plausible address is a place somebody drives to (Rule 1).
+
+So the seventh is built properly and the rest are a seam. That is also the
+right way round commercially. A directory is a list anyone can buy. What this
+product has that nobody else does is the evidence behind the visit, and it took
+the previous twenty-seven stages to be able to produce it.
+
+### The referral report
+
+`src/domain/referral` builds it; `src/services/referral` gathers what it needs;
+`/vehicles/[id]/referral` shows it and `/api/v1/vehicles/[id]/referral` serves
+it. Deterministic and total -- no branch introduces a figure, a symptom or a
+component name.
+
+- **The concern is the owner's words or nothing.** `ReferralConcern` is a
+  union, not a nullable string, because it must never be inferred. A lean
+  condition is a measurement, not a complaint anybody made, and filling this in
+  from the findings would put words in the owner's mouth and hand them to a
+  mechanic as the reason for the visit.
+- **The simulator disclosure is the first line of the document**, not a
+  footnote. Everywhere else, Rule 2 protects a reader who has the app around
+  them; this page leaves the building and is read by somebody who was not there
+  for the scan and will act on it.
+- **It names no part and interprets no code.** The reader is a mechanic and
+  "just tell them what to change" reads as helpfulness, which is exactly why
+  the discipline is most likely to slip here. A mechanic also already has a
+  code table; handing them a guessed meaning is offering worse information than
+  they have, dressed as help.
+- **No repair is ever reported as fixed.** The four stored verdicts render as
+  four sentences, the strongest of which is still "moved the way a successful
+  repair would move it". A repair with no scan after it says its effect is
+  unknown rather than leaving the line blank.
+- **Limitations are a non-empty tuple**, so a report without its limits cannot
+  be constructed -- the device the repair guides use for safety sections. Two
+  entries are unconditional, including that braking and suspension were not
+  assessed at all.
+- **A ruled-out cause is not offered as a candidate** but does appear in the
+  limitations. A mechanic weighs every line on a candidate list, and a
+  mechanism the evidence excluded should not be taking their attention.
+- **The recommendation is computed now; the diagnosis is not.** A stored
+  diagnosis must keep saying what the owner was told at the time. A
+  recommendation is about what to do next, so it is made against today's
+  catalogue -- and a test already performed is never offered again, because its
+  result is in this very report.
+- **The most recent scan, never a merge of several.** A scan is a set of
+  readings taken together under stated conditions; combining two would describe
+  a vehicle that never existed at any one moment. Repairs are the exception,
+  because their value to the mechanic is the sequence.
+- Plain text, because of how it actually travels: pasted into a message,
+  printed, read at a counter. The screen shows exactly the text that is copied
+  rather than a friendlier rendering of it -- otherwise somebody hands over a
+  document they have not read.
+
+### The marketplace seam
+
+`src/domain/marketplace` plus `src/services/marketplace`, same shape as the
+OBD, AI, video and cost registries. `MARKETPLACE_PROVIDER` selects one; an
+unknown id falls back to unconfigured rather than throwing at request time.
+
+- **`search` returns a list and a note.** An empty list on its own reads as "no
+  garages near you", which is a claim about the reader's area that nothing here
+  could support.
+- **`BookingOutcome` has no success case this build can reach.** A reference
+  number invented here would be an appointment nobody has.
+- **A listing carries no rating, review count or recommendation.** Those are
+  the fields that turn a directory into a ranking, and a ranking this build
+  cannot substantiate is an opinion about a real business presented as a
+  measurement.
+
+### Two defects the tests caught
+
+The Playwright run found `ReferralPanel` calling `useToast` with no
+`ToastProvider` anywhere in the app tree -- the provider is mounted only in the
+design-system showcase. The copy confirmation became an inline `role="status"`
+line rather than mounting a provider for one button (Rule 13).
+
+The vehicle profile still carried disabled "Run diagnostic (Stage 9)" and "View
+history (Stage 15)" buttons, thirteen stages after both shipped. A disabled
+control left in place after the feature behind it exists tells the user it does
+not exist, which is its own false statement about the product. They are now
+links to History, Health and the referral report.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

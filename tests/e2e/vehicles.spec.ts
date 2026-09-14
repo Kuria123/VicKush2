@@ -70,9 +70,11 @@ test('profile reports unavailable metrics instead of inventing them', async ({ p
   // Connecting works as of Stage 7, so it is a real link now.
   await expect(page.getByRole('link', { name: 'Connect vehicle' })).toBeVisible();
 
-  // The rest still cannot work, so they stay disabled rather than decorative.
-  for (const label of ['Run diagnostic', 'View history']) {
-    await expect(page.getByRole('button', { name: new RegExp(label, 'i') })).toBeDisabled();
+  // The rest are real as of Stages 15-28. A disabled control left in place
+  // after the feature behind it shipped tells the user it does not exist,
+  // which is its own kind of false statement about the product.
+  for (const label of ['History', 'Health', 'Report for a mechanic']) {
+    await expect(page.getByRole('link', { name: label, exact: true })).toBeVisible();
   }
 });
 
