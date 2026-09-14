@@ -832,6 +832,60 @@ awaited. Adding a queue would be infrastructure with no work to put in it.
 **Caching.** Every read is user-scoped and already indexed. A cache would add
 invalidation bugs to queries that are not slow.
 
+## Mobile experience (Stage 27)
+
+No React Native application is built here. What this stage does is make one
+possible without a second copy of the diagnostic logic, which is the brief's
+actual requirement: web, mobile, OBD hardware and cloud AI share the same core
+domain and API.
+
+- **The domain is portable, and a test says so.** `src/domain/portability.test.ts`
+  walks every domain source file and rejects browser globals, Node built-ins,
+  framework imports, service-layer imports and `process.` access. The way this
+  requirement fails is never a decision to fork the logic -- it is one
+  `navigator` call added by someone working on the web build, which quietly
+  makes the module unusable on Hermes, and by the time anyone notices, copying
+  it looks like the cheap fix. ESLint already blocks framework *imports*; an
+  import rule cannot see an ambient global.
+- **`Intl` and `toLocale*` are allowed, by an explicit list of three files.**
+  Both are ECMA-402 and exist on Hermes, Node and every target browser. The
+  list is there so that growing it is a decision rather than an accident.
+- **The reads a client needs exist over HTTP.** The web app reads through
+  server components calling services in-process -- a round trip saved, and an
+  option no other client has. `/api/v1/vehicles`, `.../history` and
+  `.../health` are thin adapters over `listVehiclesForOwner`, `listTimeline`,
+  `listMaintenance`, `getVehicleHealth` and `getPredictiveReport`: the same
+  functions the pages use, so ownership scoping, shape and wording cannot
+  drift between clients.
+- **A route may not reach into `@/lib/db`.** Writing the query a second time
+  for one client is how the ownership check inside a service's `where` clause
+  gets left out. Tested over every route, along with the fact that each one
+  calls `guard()`.
+- **A vehicle that is not yours is a 404, not an empty list.** Every query is
+  owner-scoped, so without an explicit lookup a car belonging to someone else
+  and a car with no history return the same `[]`, and a client renders "no
+  history recorded" for a vehicle it cannot see.
+- **Reads get their own, loose rate limit** (60 burst / 120 per minute). A
+  mobile app refreshing a screen never notices it; a client polling in a loop
+  still costs a query each time.
+
+### What cannot be shared, and where the seam is
+
+`WebSerialObdLink` is Web Serial, and Web Serial does not exist on React
+Native. This is the one genuinely platform-bound piece, and it is already
+behind `ObdLink` in `src/domain/telemetry/transport.ts` -- four methods: open,
+exchange, close, describe. A native build supplies a BLE transport implementing
+that interface; the ELM327 protocol above it, which is where the arithmetic and
+therefore the bugs live, is pure and unchanged. That seam was built in Stage 24
+for a different reason and holds here for free, which is the argument for
+having drawn it.
+
+The other non-shared layer is the UI. `src/components` and `src/features` are
+React DOM and Tailwind; a native app rewrites the views and reuses everything
+underneath them. That is not duplicated business logic -- there is no logic in
+them to duplicate, which is what the architecture rule at the top of this file
+has been buying all along.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,

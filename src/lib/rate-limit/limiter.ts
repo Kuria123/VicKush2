@@ -49,6 +49,9 @@ export const RATE_LIMITS = {
   'ai-explain': { capacity: 5, perMinute: 10 },
   'ai-mechanic': { capacity: 8, perMinute: 20 },
   'save-session': { capacity: 10, perMinute: 30 },
+  // Reads are cheap, but a client polling a list still costs a query each
+  // time. Loose enough that a mobile app refreshing a screen never notices.
+  read: { capacity: 60, perMinute: 120 },
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;
