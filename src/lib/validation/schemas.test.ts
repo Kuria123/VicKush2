@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { emailSchema, fieldErrors, passwordSchema, signInSchema, signUpSchema } from './schemas';
+import {
+  LOCAL_ACCOUNT_DOMAIN,
+  emailSchema,
+  fieldErrors,
+  passwordSchema,
+  signInSchema,
+  signUpSchema,
+} from './schemas';
 
 describe('emailSchema', () => {
   it('normalises case and surrounding whitespace', () => {
@@ -53,6 +60,37 @@ describe('signInSchema', () => {
     // Existing accounts may predate a stricter policy; strength is only
     // enforced at sign-up.
     expect(signInSchema.safeParse({ email: 'a@b.com', password: 'x' }).success).toBe(true);
+  });
+
+  it('accepts a full email address unchanged', () => {
+    const result = signInSchema.safeParse({ email: '  Gerald@Example.com ', password: 'x' });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.email).toBe('gerald@example.com');
+  });
+
+  it('resolves a bare username to the local account domain', () => {
+    const result = signInSchema.safeParse({ email: 'ADMIN', password: 'x' });
+
+    expect(result.success).toBe(true);
+    // Not a second kind of account: one lookup, one unique column underneath.
+    if (result.success) expect(result.data.email).toBe(`admin@${LOCAL_ACCOUNT_DOMAIN}`);
+  });
+
+  it.each([
+    ['an empty identifier', ''],
+    ['a single character', 'a'],
+    ['a username with a space', 'the admin'],
+    ['a username with a slash', 'admin/1'],
+    ['a malformed address', 'admin@'],
+  ])('rejects %s', (_label, value) => {
+    expect(signInSchema.safeParse({ email: value, password: 'x' }).success).toBe(false);
+  });
+
+  it('does not let a username reach a domain somebody else could own', () => {
+    // .local is reserved and can never resolve on the public internet, which
+    // is the whole reason it is the one used here.
+    expect(LOCAL_ACCOUNT_DOMAIN.endsWith('.local')).toBe(true);
   });
 });
 

@@ -11,7 +11,7 @@ import { fieldErrors, signInSchema, signUpSchema } from '@/lib/validation/schema
 import { DEFAULT_SIGNED_IN_REDIRECT } from '@/lib/auth/routes';
 import type { ActionResult } from '@/types';
 
-const GENERIC_SIGN_IN_ERROR = 'Invalid email or password.';
+const GENERIC_SIGN_IN_ERROR = 'Invalid credentials.';
 
 export async function signUpAction(
   _prev: ActionResult | null,

@@ -249,7 +249,12 @@ describe('project rules', () => {
     expect(result.causes.filter((c) => c.status === 'SUPPORTED')).toHaveLength(0);
   });
 
-  it('never recommends a part', () => {
+  // Six full simulator runs, each sixty seconds of modelled time. Comfortably
+  // inside the 5 s default on an idle machine and not when the rest of the
+  // suite is running beside it, so the budget is stated rather than left to
+  // luck. Raised here alone rather than globally: a genuinely hung test
+  // elsewhere should still fail fast.
+  it('never recommends a part', { timeout: 30_000 }, () => {
     const banned = /\b(replace|install|fit|buy|order|new part|repair kit)\b/i;
 
     for (const scenario of [

@@ -207,7 +207,15 @@ describe('recognising the claim', () => {
  * Project rules
  * ------------------------------------------------------------------------ */
 
-describe('project rules', () => {
+/*
+ * Each case here runs a full simulation, and there are five of them in every
+ * test below — twenty simulator runs in one describe. Comfortably inside the
+ * 5 s default on an idle machine and not when the rest of the suite is running
+ * beside it, so the budget is stated once for the block rather than left to
+ * luck. Scoped here rather than raised globally: a genuinely hung test
+ * elsewhere should still fail fast.
+ */
+describe('project rules', { timeout: 30_000 }, () => {
   const cases = [
     ['Replace the mass airflow sensor', 'VACUUM_LEAK'],
     ['Replace the split intake hose', 'VACUUM_LEAK'],

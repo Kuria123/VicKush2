@@ -375,7 +375,9 @@ describe('the engine itself', () => {
     );
   });
 
-  it('backs every finding with at least one piece of evidence', () => {
+  // Four full simulations in one test — same reason as the overheating case
+  // above: the 5 s default is a unit-test budget, not a simulation one.
+  it('backs every finding with at least one piece of evidence', { timeout: 30_000 }, () => {
     for (const scenario of [
       'NORMAL',
       'VACUUM_LEAK',

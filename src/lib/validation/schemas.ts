@@ -33,8 +33,57 @@ export const signUpSchema = z.object({
   password: passwordSchema,
 });
 
+/**
+ * The local-account domain.
+ *
+ * Accounts created inside this application rather than by someone typing their
+ * own address. `.local` is reserved for exactly this and can never collide with
+ * a real internet domain, so a username can be resolved to an address without
+ * any chance of pointing at somebody else's mailbox.
+ */
+export const LOCAL_ACCOUNT_DOMAIN = 'automind.local';
+
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2, 'Enter a username or email address')
+  .max(32, 'That username is too long')
+  .regex(/^[a-z0-9._-]+$/, 'A username may use letters, numbers, dots, dashes and underscores');
+
+/**
+ * What someone types into the first box on the sign-in form.
+ *
+ * Either a full email address or a bare username, because both are real ways
+ * people identify themselves and rejecting the shorter one is a rule the user
+ * has to learn rather than a fact about their account. A bare username is
+ * resolved to `<name>@automind.local` — it is not a second kind of account,
+ * just a shorter way of naming the same one, so there is one lookup and one
+ * unique column underneath.
+ *
+ * Sign-*up* is unaffected and still requires a real address: an account that
+ * can never be recovered because nobody knows where to send the mail is a
+ * problem to create deliberately, not by default.
+ */
+export const signInIdentifierSchema = z
+  .string()
+  .trim()
+  .min(1, 'Email or username is required')
+  .transform((value) => value.toLowerCase())
+  .superRefine((value, ctx) => {
+    const schema = value.includes('@') ? emailSchema : usernameSchema;
+    const result = schema.safeParse(value);
+    if (!result.success) {
+      ctx.addIssue({
+        code: 'custom',
+        message: result.error.issues[0]?.message ?? 'Enter a username or email address',
+      });
+    }
+  })
+  .transform((value) => (value.includes('@') ? value : `${value}@${LOCAL_ACCOUNT_DOMAIN}`));
+
 export const signInSchema = z.object({
-  email: emailSchema,
+  email: signInIdentifierSchema,
   password: z.string().min(1, 'Password is required'),
 });
 

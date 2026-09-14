@@ -1,7 +1,29 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// The admin sign-in spec reads ADMIN_PASSWORD, which lives in .env.local
+// alongside DATABASE_URL rather than in the repository. Loaded here because
+// Playwright does not read env files on its own; a missing file is not an
+// error, since only that one spec depends on it and it says so when it skips.
+try {
+  process.loadEnvFile('.env.local');
+} catch {
+  // No .env.local on this machine. The spec that needs it will skip and say so.
+}
+
 // Only Microsoft Edge is installed on this machine, so tests run against the
 // installed Edge channel rather than a downloaded Chromium build.
+/*
+ * The port, once.
+ *
+ * `reuseExistingServer` attaches to whatever is already listening, and it
+ * cannot tell one Next app from another — a different project on 3000 means
+ * the whole suite silently runs against the wrong application and fails in
+ * ways that look like real bugs. Overriding PORT is the escape hatch for that,
+ * without having to stop the other project.
+ */
+const PORT = process.env.PORT ?? '3000';
+const BASE_URL = `http://localhost:${PORT}`;
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -14,7 +36,7 @@ export default defineConfig({
   // assertion timeout is not enough for the credential flows.
   expect: { timeout: 15_000 },
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
   projects: [
@@ -24,8 +46,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: `npm run dev -- --port ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

@@ -20,9 +20,11 @@ export default function SignInPage() {
         fields={[
           {
             name: 'email',
-            label: 'Email',
-            type: 'email',
-            autoComplete: 'email',
+            label: 'Email or username',
+            // Not type="email": the browser would refuse a bare username
+            // before the form was ever submitted.
+            type: 'text',
+            autoComplete: 'username',
           },
           {
             name: 'password',

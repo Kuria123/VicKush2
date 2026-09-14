@@ -974,6 +974,62 @@ control left in place after the feature behind it exists tells the user it does
 not exist, which is its own false statement about the product. They are now
 links to History, Health and the referral report.
 
+## Accounts and sign-in
+
+There is **no role system**. Every account owns its own vehicles and sees only
+those; "admin" is a username, not a privilege level. Nothing in the codebase
+grants one account authority over another's data, and adding a role would be a
+real feature with a migration behind it, not a label.
+
+- **Sign-in accepts an email address or a bare username.** A username with no
+  `@` resolves to `<name>@automind.local` — one lookup against one unique
+  column, not a second kind of account. `.local` is reserved and cannot resolve
+  on the public internet, so a username can never be turned into an address
+  that reaches somebody else's mailbox.
+- **Sign-*up* still requires a real address**, and still enforces the password
+  policy: ten characters, mixed case, a digit. An account nobody can send mail
+  to is a decision to make deliberately, not by default.
+- **Sign-in does not enforce password strength**, because an existing account
+  may predate a stricter policy — and because the seeded administrator's
+  password is deliberately weaker than the policy allows.
+- **The failure message is identical for every cause**: wrong password, no such
+  user, no credential account. It says "Invalid credentials" and never confirms
+  who is registered.
+- `npm run db:seed` creates or resets the administrator: `admin@automind.local`,
+  signed in as `admin`. Re-running it resets the password, so it is a reliable
+  way back in. It creates no vehicle or diagnostic data — Rule 1 applies to the
+  seed as much as to the product.
+- **The seeded password lives in `ADMIN_PASSWORD` in `.env.local`, never in a
+  committed file, and has no default.** This repository is pushed to GitHub,
+  and a password committed once stays in the history after it is edited out. A
+  default would put the same password on every machine that ever ran the seed;
+  the refusal names what is missing instead (Rule 3).
+- The `admin-sign-in` e2e spec reads the same variable and **skips with a
+  stated reason when it is unset** — a visible gap rather than a silent pass.
+
+### Running the e2e suite on another port
+
+`PORT` overrides it, because `reuseExistingServer` attaches to whatever is
+already listening and cannot tell one Next app from another — a different
+project on 3000 means the whole suite silently runs against the wrong
+application and fails in ways that look like real bugs. **Set `AUTH_URL` to
+match.** Auth.js redirects to the address it is configured with, not the one
+the request arrived on, so a mismatched port signs in successfully and then
+lands on a dead host, which reads as a broken login rather than as a
+misconfiguration:
+
+```
+AUTH_URL=http://localhost:3100 PORT=3100 npm run test:e2e
+```
+
+### Simulation-driven tests carry explicit time budgets
+
+Vitest's 5 s default is a unit-test budget. A test that drives the simulator
+runs sixty seconds of modelled physics per scenario, passes on an idle machine
+and times out beside the rest of the suite. Those tests state `timeout: 30_000`
+individually, or once for the describe block. Raised there rather than
+globally, so a genuinely hung test elsewhere still fails fast.
+
 ## Non-negotiable rules
 
 1. **Never fabricate data** — VINs, DTCs, sensor readings, specifications,
