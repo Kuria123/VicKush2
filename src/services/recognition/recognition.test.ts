@@ -166,6 +166,35 @@ describe('what comes back', () => {
     if (!outcome.ok) expect(outcome.reason).toBe('RATE_LIMITED');
   });
 
+  it('passes the provider’s own refusal through, not just a status code', async () => {
+    // The case that actually came up first: a valid key on an account with no
+    // credit. "returned 400" would have sent someone hunting for a bug in
+    // their photograph.
+    const refused = (async () =>
+      new Response(
+        JSON.stringify({
+          error: { type: 'invalid_request_error', message: 'Your credit balance is too low.' },
+        }),
+        { status: 400, headers: { 'content-type': 'application/json' } },
+      )) as unknown as typeof fetch;
+
+    const outcome = await provider(refused).recognise([image()]);
+
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) {
+      expect(outcome.reason).toBe('PROVIDER_ERROR');
+      expect(outcome.message).toMatch(/credit balance is too low/i);
+    }
+  });
+
+  it('falls back to the status when there is no message to pass on', async () => {
+    const opaque = (async () => new Response('<html>502</html>', { status: 502 })) as unknown as typeof fetch;
+    const outcome = await provider(opaque).recognise([image()]);
+
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) expect(outcome.message).toMatch(/returned 502/);
+  });
+
   it('reports a transport failure with its reason rather than swallowing it', async () => {
     const broken = (async () => {
       throw new Error('socket hang up');

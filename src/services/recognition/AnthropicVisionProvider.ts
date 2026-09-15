@@ -169,10 +169,21 @@ export class AnthropicVisionProvider implements RecognitionProvider {
     }
 
     if (!response.ok) {
+      /*
+       * The provider's own words, not just the status.
+       *
+       * "returned 400" tells the owner nothing they can act on. The body
+       * carries the actual reason — an exhausted credit balance, a model that
+       * does not exist, an image too large — and every one of those calls for
+       * a different response from the person reading the screen (Rule 3).
+       */
+      const detail = await this.errorMessage(response);
       return {
         ok: false,
         reason: 'PROVIDER_ERROR',
-        message: `The vision provider returned ${response.status}.`,
+        message: detail
+          ? `The vision provider refused the request: ${detail}`
+          : `The vision provider returned ${response.status}.`,
       };
     }
 
@@ -202,6 +213,17 @@ export class AnthropicVisionProvider implements RecognitionProvider {
       model: this.model,
       raw: { imagesExamined: images.length, claims },
     };
+  }
+
+  /** The API's own error text, when it sent one. Never throws on a bad body. */
+  private async errorMessage(response: Response): Promise<string | null> {
+    try {
+      const body = (await response.json()) as { error?: { message?: unknown } };
+      const message = body.error?.message;
+      return typeof message === 'string' && message.length > 0 ? message : null;
+    } catch {
+      return null;
+    }
   }
 
   private async extractText(response: Response): Promise<string | null> {
